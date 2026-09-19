@@ -1,0 +1,1117 @@
+<!-- Copied from meta_ads_mini_app.html for Vercel deployment -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Meta Ads AI Dashboard - Telegram Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #0f172a;
+      --foreground: #f8fafc;
+      --card: #1e293b;
+      --border: #334155;
+      --secondary: #334155;
+      --muted-foreground: #94a3b8;
+    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.4); border-radius: 4px; }
+    .fade-in { animation: fadeIn 0.25s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .animate-spin-fast { animation: spin 0.8s linear infinite; }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen pb-24 font-sans selection:bg-blue-500 selection:text-white">
+
+  <!-- TOP HEADER (Telegram App Bar) -->
+  <header class="sticky top-0 z-40 bg-[var(--card)]/90 backdrop-blur-md border-b border-[var(--border)] px-4 py-3 flex items-center justify-between shadow-xs">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20 text-sm">
+        AI
+      </div>
+      <div>
+        <div class="flex items-center gap-1.5">
+          <h1 class="font-bold text-sm leading-tight text-[var(--foreground)]">Meta Ads Hub</h1>
+          <span id="api-status-badge" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>Live
+          </span>
+        </div>
+        <p class="text-[11px] text-[var(--muted-foreground)]">Trợ Lý AI & Quản Trị Ads</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="openTokenModal()" class="p-2 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--muted-foreground)] hover:text-white text-xs transition-all" title="Cài đặt Token">
+        ⚙️
+      </button>
+      <button onclick="fetchLiveData()" id="btn-refresh" class="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 shadow-sm">
+        <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        <span class="text-xs font-semibold">Cập nhật</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- TOKEN CONFIG MODAL -->
+  <div id="token-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+        <h3 class="font-bold text-sm text-[var(--foreground)] flex items-center gap-1.5">
+          <span>🔑</span> Cài Đặt Meta Access Token
+        </h3>
+        <button onclick="closeTokenModal()" class="text-[var(--muted-foreground)] hover:text-white text-lg leading-none">&times;</button>
+      </div>
+      <p class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+        Dán mã Facebook Access Token của bạn vào đây nếu token cũ hết hạn. Token sẽ được lưu trực tiếp trên thiết bị của bạn an toàn.
+      </p>
+      <div class="space-y-1.5">
+        <label class="text-[11px] font-semibold text-[var(--foreground)]">Meta Access Token:</label>
+        <textarea id="input-token" rows="4" placeholder="EAAgZA4s..." class="w-full px-3 py-2 text-xs rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"></textarea>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeTokenModal()" class="flex-1 py-2 rounded-xl bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-xs font-semibold text-[var(--foreground)]">
+          Đóng
+        </button>
+        <button onclick="saveTokenAndReload()" class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20">
+          Lưu & Tải Dữ Liệu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-2xl mx-auto px-4 py-4 space-y-4">
+
+    <!-- NAVIGATION TABS -->
+    <div class="grid grid-cols-4 gap-1 p-1 bg-[var(--secondary)]/70 rounded-xl border border-[var(--border)] text-xs font-medium">
+      <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="py-2 px-1 rounded-lg text-center font-semibold bg-[var(--card)] text-[var(--foreground)] shadow-xs transition-all">
+        📊 Tổng Quan
+      </button>
+      <button onclick="switchTab('create')" id="tab-btn-create" class="py-2 px-1 rounded-lg text-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all">
+        🚀 Lên Ads
+      </button>
+      <button onclick="switchTab('ai')" id="tab-btn-ai" class="py-2 px-1 rounded-lg text-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all">
+        🧠 Trợ Lý AI
+      </button>
+      <button onclick="switchTab('alerts')" id="tab-btn-alerts" class="py-2 px-1 rounded-lg text-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all">
+        🚨 Cảnh Báo
+      </button>
+    </div>
+
+    <!-- ERROR BANNER -->
+    <div id="error-banner" class="hidden p-3.5 rounded-xl border border-red-500/30 bg-red-500/10 text-xs text-red-300 space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="font-bold flex items-center gap-1.5">
+          <span>⚠️</span> <span id="error-banner-title">Lỗi kết nối Meta Ads API</span>
+        </span>
+        <button onclick="openTokenModal()" class="px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 text-white font-semibold text-[11px]">
+          🔑 Đổi Token
+        </button>
+      </div>
+      <p id="error-banner-desc" class="text-[11px] opacity-90 leading-relaxed"></p>
+    </div>
+
+    <!-- TAB 1: DASHBOARD TỔNG QUAN -->
+    <section id="view-dashboard" class="space-y-4 fade-in">
+      
+      <!-- BỘ CHỌN NGÀY BÁO CÁO (DATE SELECTOR) -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-2xs space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm">📅</span>
+            <span class="text-xs font-bold text-[var(--foreground)]">Khoảng Thời Gian Báo Cáo</span>
+          </div>
+          <span id="current-date-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+            Hôm nay
+          </span>
+        </div>
+
+        <!-- Quick selection buttons -->
+        <div class="grid grid-cols-3 gap-1.5 text-xs">
+          <button onclick="selectDatePreset('today')" id="btn-date-today" class="py-1.5 rounded-lg bg-blue-600 text-white font-semibold shadow-xs transition-all">
+            Hôm nay
+          </button>
+          <button onclick="selectDatePreset('yesterday')" id="btn-date-yesterday" class="py-1.5 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] font-medium transition-all">
+            Hôm qua
+          </button>
+          <button onclick="selectDatePreset('last_7d')" id="btn-date-last_7d" class="py-1.5 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] font-medium transition-all">
+            7 ngày qua
+          </button>
+        </div>
+
+        <!-- Custom date input -->
+        <div class="flex items-center gap-2 pt-1 border-t border-[var(--border)]">
+          <label class="text-[11px] text-[var(--muted-foreground)] shrink-0 font-medium">Hoặc chọn ngày:</label>
+          <input type="date" id="custom-date-picker" onchange="selectCustomDate(this.value)" class="flex-1 px-2.5 py-1 text-xs rounded-lg border border-[var(--border)] bg-[var(--secondary)] text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <!-- HERO BANNER / KPI SUMMARY -->
+      <div class="bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-500/15 relative overflow-hidden">
+        <div class="absolute -right-8 -bottom-8 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="flex items-center justify-between text-xs opacity-90 mb-1">
+          <span id="hero-progress-label">Tiến độ ngân sách ngày</span>
+          <span id="hero-progress-pct" class="font-bold bg-white/20 px-2 py-0.5 rounded-full">--% Đã Tiêu</span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span class="text-2xl font-black tracking-tight" id="hero-spend">0 VNĐ</span>
+          <span class="text-xs opacity-80" id="hero-budget">/ 0 VNĐ dự kiến</span>
+        </div>
+        <!-- Progress bar -->
+        <div class="w-full bg-white/20 h-2 rounded-full overflow-hidden mb-3">
+          <div id="hero-progress-bar" class="bg-emerald-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <!-- KPI GRID (4 CỘT CHÍNH: NHÓM ĐANG CHẠY, ĐK, CR, CPR) -->
+        <div class="grid grid-cols-4 gap-2 pt-2 border-t border-white/15 text-center text-xs">
+          <div>
+            <p class="opacity-75 text-[10px]">Nhóm đang chạy</p>
+            <p class="font-bold text-sm mt-0.5 text-emerald-300" id="hero-active-adsets">0 nhóm</p>
+          </div>
+          <div>
+            <p class="opacity-75 text-[10px]">Hoàn tất ĐK</p>
+            <p class="font-bold text-sm mt-0.5" id="hero-reg">0 lượt</p>
+          </div>
+          <div>
+            <p class="opacity-75 text-[10px]">Tỷ lệ đổi (CR)</p>
+            <p class="font-bold text-sm mt-0.5 text-amber-300" id="hero-cr">0.00%</p>
+          </div>
+          <div>
+            <p class="opacity-75 text-[10px]">Giá / ĐK (CPR)</p>
+            <p class="font-bold text-sm mt-0.5 text-emerald-300" id="hero-cpr">0 VNĐ</p>
+          </div>
+        </div>
+
+        <!-- LINK CLICKS & FORMULA HINT -->
+        <div class="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] opacity-85">
+          <span>🔗 Lượt click link: <b id="hero-link-clicks">0 lượt</b></span>
+          <span class="text-[10px] italic">CR = (Lượt ĐK / Click link) * 100%</span>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE BAR CHART: SO SÁNH CÁC TÀI KHOẢN -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xs space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-sm text-[var(--foreground)] flex items-center gap-1.5">
+            <span>📊</span> Hiệu Suất Các Tài Khoản AI
+          </h2>
+          <span class="text-[11px] text-[var(--muted-foreground)]" id="chart-date-label">Hôm nay</span>
+        </div>
+        
+        <div class="space-y-3 pt-1 text-xs" id="accounts-chart-container">
+          <div class="text-center py-4 text-[var(--muted-foreground)]">Đang tải số liệu...</div>
+        </div>
+      </div>
+
+      <!-- DETAILED ACCOUNTS LIST -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="font-bold text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
+            Chi Tiết Từng Tài Khoản AI
+          </h3>
+          <span class="text-[11px] text-[var(--muted-foreground)]" id="accounts-count-label">6 tài khoản</span>
+        </div>
+        
+        <div id="accounts-cards-container" class="space-y-2.5">
+          <div class="p-6 text-center text-xs text-[var(--muted-foreground)]">
+            <div class="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin-fast mb-2"></div>
+            <p>Đang đồng bộ số liệu Meta Ads API...</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW CHI TIẾT CHIẾN DỊCH & NHÓM QUẢNG CÁO TỪNG TÀI KHOẢN -->
+    <section id="view-detail" class="space-y-4 hidden fade-in">
+      <div class="flex items-center justify-between">
+        <button onclick="backToDashboard()" class="text-xs bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] px-3 py-1.5 rounded-xl font-semibold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs">
+          <span>← Quay lại Bảng Điều Khiển</span>
+        </button>
+        <button onclick="createAdForCurrentAccount()" class="text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition-all active:scale-95 shadow-md shadow-blue-500/20 cursor-pointer">
+          <span>🚀 Lên Ads Cho Tài Khoản Này</span>
+        </button>
+      </div>
+
+      <div id="detail-account-header" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xs space-y-3">
+      </div>
+
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between px-1">
+          <h3 class="font-bold text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
+            Danh Sách Nhóm Đang Chạy (ACTIVE)
+          </h3>
+          <span id="detail-camp-count" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500">
+            0 nhóm
+          </span>
+        </div>
+        <div id="detail-campaigns-list" class="space-y-2.5">
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: LÊN ADS TRỰC QUAN & MOCKUP LIVE PREVIEW -->
+    <section id="view-create" class="space-y-4 hidden fade-in">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xs space-y-4">
+        <div>
+          <h2 class="font-bold text-base text-[var(--foreground)]">🚀 Tạo Chiến Dịch Mới (Bản Nháp 250k)</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Tạo chiến dịch ABO an toàn ở trạng thái PAUSED</p>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">1. Chọn Tài Khoản Ads</label>
+          <div class="grid grid-cols-3 gap-2" id="create-acc-selector">
+            <button onclick="selectAccount('AI 01')" id="acc-btn-AI 01" class="py-2 px-2 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-xs font-bold text-[var(--foreground)] hover:border-blue-500 transition-all">AI 01</button>
+            <button onclick="selectAccount('AI 02')" id="acc-btn-AI 02" class="py-2 px-2 rounded-xl border border-blue-500 bg-blue-600/15 text-xs font-bold text-blue-400 transition-all">AI 02</button>
+            <button onclick="selectAccount('AI 03')" id="acc-btn-AI 03" class="py-2 px-2 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-xs font-bold text-[var(--foreground)] hover:border-blue-500 transition-all">AI 03</button>
+            <button onclick="selectAccount('AI 04')" id="acc-btn-AI 04" class="py-2 px-2 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-xs font-bold text-[var(--foreground)] hover:border-blue-500 transition-all">AI 04</button>
+            <button onclick="selectAccount('AI 05')" id="acc-btn-AI 05" class="py-2 px-2 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-xs font-bold text-[var(--foreground)] hover:border-blue-500 transition-all">AI 05</button>
+            <button onclick="selectAccount('AI 08')" id="acc-btn-AI 08" class="py-2 px-2 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-xs font-bold text-[var(--foreground)] hover:border-blue-500 transition-all">AI 08</button>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">2. Tiêu Đề Quảng Cáo (Headline)</label>
+          <input type="text" id="ad-headline-input" oninput="updateMockup()" value="HỌC BỔNG TIẾNG ANH AI - GIẢM 50% HÈ NÀY" class="w-full px-3 py-2 text-xs rounded-xl border border-[var(--border)] bg-[var(--secondary)] focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">3. Nội Dung Bài Viết (Primary Text)</label>
+          <textarea id="ad-body-input" oninput="updateMockup()" rows="3" class="w-full px-3 py-2 text-xs rounded-xl border border-[var(--border)] bg-[var(--secondary)] focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed">Cơ hội duy nhất trong tháng: Bé 6-13 tuổi tự tin giao tiếp tiếng Anh sau 3 tháng với giáo viên AI bản xứ. Đăng ký nhận suất học bổng 50% ngay hôm nay!</textarea>
+        </div>
+
+        <div class="space-y-1.5 pt-2 border-t border-[var(--border)]">
+          <span class="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider block">👁️ Xem trước Mockup (Facebook Feed)</span>
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm max-w-md mx-auto">
+            <div class="p-3 flex items-center gap-2.5 border-b border-[var(--border)]/50">
+              <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">E</div>
+              <div class="leading-tight">
+                <p class="font-bold text-xs text-[var(--foreground)]">Edupia AI English <span class="text-[10px] text-blue-500">✓</span></p>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Được tài trợ · 🌐</p>
+              </div>
+            </div>
+            <div class="p-3 text-xs leading-relaxed text-[var(--foreground)] whitespace-pre-wrap" id="mockup-body">
+              Cơ hội duy nhất trong tháng: Bé 6-13 tuổi tự tin giao tiếp tiếng Anh sau 3 tháng với giáo viên AI bản xứ. Đăng ký nhận suất học bổng 50% ngay hôm nay!
+            </div>
+            <div class="w-full bg-gradient-to-tr from-slate-800 to-indigo-900 aspect-video flex flex-col items-center justify-center text-white/80 p-4 text-center">
+              <div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-xl mb-2">▶</div>
+              <p class="text-xs font-semibold">Video Quảng Cáo (16:9 / 9:16)</p>
+              <p class="text-[10px] opacity-70">Nhóm: <span id="mockup-acc-tag" class="text-amber-400 font-bold">AI 02</span></p>
+            </div>
+            <div class="p-3 bg-[var(--secondary)] flex items-center justify-between">
+              <div class="overflow-hidden pr-2">
+                <p class="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)] truncate">HOCBONG.EDUPIA.VN</p>
+                <p class="font-bold text-xs text-[var(--foreground)] truncate" id="mockup-headline">HỌC BỔNG TIẾNG ANH AI - GIẢM 50% HÈ NÀY</p>
+              </div>
+              <span class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shrink-0">
+                Đăng ký ngay
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="submitAd()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-500/20 active:scale-[0.99] transition-all cursor-pointer">
+          🚀 Tạo Bản Nháp Ngay Trên Telegram
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 3: TRỢ LÝ AI GEMINI 3.8 CONVERSATION -->
+    <section id="view-ai" class="space-y-4 hidden fade-in">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xs space-y-3">
+        <div class="flex items-center gap-2.5 pb-2 border-b border-[var(--border)]">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
+            ✨
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-[var(--foreground)]">Trợ Lý AI Media Buyer</h3>
+            <p class="text-[11px] text-[var(--muted-foreground)]">Google Gemini 3.8 Flash · Sẵn sàng cố vấn</p>
+          </div>
+        </div>
+
+        <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1 text-xs" id="chat-box">
+          <div class="flex gap-2">
+            <div class="w-6 h-6 rounded-full bg-purple-600/20 text-purple-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">AI</div>
+            <div class="bg-[var(--secondary)] rounded-xl rounded-tl-xs p-2.5 max-w-[85%] text-[var(--foreground)] leading-relaxed">
+              Chào Huy! Hệ thống quảng cáo Meta Ads đã được đồng bộ số liệu thời gian thực. Bạn cần mình phân tích nhóm nào hay gợi ý điều chỉnh ngân sách không?
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-1.5 overflow-x-auto pb-1 text-[11px]">
+          <button onclick="sendQuickPrompt('Hôm nay nên scale nhóm nào an toàn nhất?')" class="whitespace-nowrap px-2.5 py-1 rounded-full bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] transition-all border border-[var(--border)] cursor-pointer">
+            📈 Nên scale tài khoản nào?
+          </button>
+          <button onclick="sendQuickPrompt('Phân tích lý do vì sao chiến dịch có CPR rẻ?')" class="whitespace-nowrap px-2.5 py-1 rounded-full bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] transition-all border border-[var(--border)] cursor-pointer">
+            ⭐ Vì sao CPR rẻ?
+          </button>
+          <button onclick="sendQuickPrompt('Viết giúp anh 3 tiêu đề quảng cáo cho phụ huynh')" class="whitespace-nowrap px-2.5 py-1 rounded-full bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] transition-all border border-[var(--border)] cursor-pointer">
+            ✍️ Viết 3 tiêu đề hay
+          </button>
+        </div>
+
+        <div class="flex gap-2 pt-1">
+          <input type="text" id="chat-input" onkeypress="handleKeyPress(event)" placeholder="Hỏi AI bất kỳ điều gì về Meta Ads..." class="flex-1 px-3 py-2 text-xs rounded-xl border border-[var(--border)] bg-[var(--secondary)] focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button onclick="sendChatMessage()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer">
+            Gửi
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: CẢNH BÁO TỰ ĐỘNG -->
+    <section id="view-alerts" class="space-y-3 hidden fade-in">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xs space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="font-bold text-sm text-[var(--foreground)] flex items-center gap-1.5">
+            <span>🚨</span> Nhóm Quảng Cáo Cần Lưu Ý Cắt Lỗ
+          </h2>
+          <span class="text-[11px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">Quét 3 ngày qua</span>
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)]">Tiêu chuẩn: Các nhóm chi tiêu &gt; 400.000 VNĐ mà 0 ra lượt đăng ký nào.</p>
+
+        <div class="space-y-2" id="alerts-list-container">
+          <div class="p-6 text-center text-xs text-[var(--muted-foreground)]">
+            Đang quét dữ liệu 3 ngày qua...
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] px-6 py-2">
+    <div class="max-w-md mx-auto flex items-center justify-around text-[10px] font-medium text-[var(--muted-foreground)]">
+      <button onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1 hover:text-blue-500 transition-all cursor-pointer">
+        <span class="text-base">📊</span>
+        <span>Dashboard</span>
+      </button>
+      <button onclick="switchTab('create')" class="flex flex-col items-center gap-1 hover:text-blue-500 transition-all cursor-pointer">
+        <span class="text-base">🚀</span>
+        <span>Lên Camp</span>
+      </button>
+      <button onclick="switchTab('ai')" class="flex flex-col items-center gap-1 hover:text-blue-500 transition-all cursor-pointer">
+        <span class="text-base">🧠</span>
+        <span>Chat AI</span>
+      </button>
+      <button onclick="switchTab('alerts')" class="flex flex-col items-center gap-1 hover:text-blue-500 transition-all cursor-pointer">
+        <span class="text-base">🚨</span>
+        <span>Cảnh Báo</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- JAVASCRIPT LOGIC & META GRAPH API INTEGRATION -->
+  <script>
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+
+    const DEFAULT_TOKEN = "EAAgZA4sZAt6ZA0BSh5iEMZAhb61sZBxw05WU3JKthrUPgRZBudskSZCJdRckAPvc3DOu2YjvH9iIuAmkNxROlc4oHN9vezyx4npopApdpjjU5l929twP2m9pQ0FIAZCMFgABZBTS703wYJBLJZC4baNXnfNaNNKjXAgKzuMmrSTfnIQ1jHLSUsfFd4zTV5UikD";
+    const EXCLUDED_ACCOUNTS = ["AI Free 01", "AI Free 02"];
+
+    let currentDatePreset = 'today';
+    let currentCustomDate = null;
+    let selectedAcc = 'AI 02';
+    let currentDetailAcc = 'AI 02';
+    let liveAccountsData = {};
+    let isFetching = false;
+
+    function getMetaToken() {
+      const hash = window.location.hash;
+      if (hash && hash.includes('token=')) {
+        const match = hash.match(/token=([^&]+)/);
+        if (match && match[1]) {
+          const t = decodeURIComponent(match[1]);
+          localStorage.setItem('meta_access_token', t);
+          return t;
+        }
+      }
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('token')) {
+        const t = params.get('token');
+        localStorage.setItem('meta_access_token', t);
+        return t;
+      }
+      const stored = localStorage.getItem('meta_access_token');
+      if (stored && stored.trim().length > 20) {
+        return stored.trim();
+      }
+      return DEFAULT_TOKEN;
+    }
+
+    function openTokenModal() {
+      document.getElementById('input-token').value = getMetaToken();
+      document.getElementById('token-modal').classList.remove('hidden');
+    }
+
+    function closeTokenModal() {
+      document.getElementById('token-modal').classList.add('hidden');
+    }
+
+    function saveTokenAndReload() {
+      const val = document.getElementById('input-token').value.trim();
+      if (val) {
+        localStorage.setItem('meta_access_token', val);
+        closeTokenModal();
+        fetchLiveData();
+      } else {
+        alert('Vui lòng nhập Access Token hợp lệ!');
+      }
+    }
+
+    function formatVND(num) {
+      if (!num || isNaN(num)) return '0 VNĐ';
+      return new Intl.NumberFormat('vi-VN').format(Math.round(num)) + ' VNĐ';
+    }
+
+    function formatNumber(num) {
+      if (!num || isNaN(num)) return '0';
+      return new Intl.NumberFormat('vi-VN').format(Math.round(num));
+    }
+
+    function selectDatePreset(preset) {
+      currentDatePreset = preset;
+      currentCustomDate = null;
+      document.getElementById('custom-date-picker').value = '';
+
+      ['today', 'yesterday', 'last_7d'].forEach(p => {
+        const btn = document.getElementById('btn-date-' + p);
+        if (p === preset) {
+          btn.className = "py-1.5 rounded-lg bg-blue-600 text-white font-semibold shadow-xs transition-all";
+        } else {
+          btn.className = "py-1.5 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] font-medium transition-all";
+        }
+      });
+
+      const badge = document.getElementById('current-date-badge');
+      const chartBadge = document.getElementById('chart-date-label');
+      if (preset === 'today') {
+        badge.innerText = 'Hôm nay';
+        chartBadge.innerText = 'Hôm nay';
+      } else if (preset === 'yesterday') {
+        badge.innerText = 'Hôm qua';
+        chartBadge.innerText = 'Hôm qua';
+      } else if (preset === 'last_7d') {
+        badge.innerText = '7 ngày qua';
+        chartBadge.innerText = '7 ngày qua';
+      }
+
+      fetchLiveData();
+    }
+
+    function selectCustomDate(dateStr) {
+      if (!dateStr) return;
+      currentDatePreset = 'custom';
+      currentCustomDate = dateStr;
+
+      ['today', 'yesterday', 'last_7d'].forEach(p => {
+        document.getElementById('btn-date-' + p).className = "py-1.5 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] font-medium transition-all";
+      });
+
+      const parts = dateStr.split('-');
+      const disp = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateStr;
+      document.getElementById('current-date-badge').innerText = `Ngày ${disp}`;
+      document.getElementById('chart-date-label').innerText = `Ngày ${disp}`;
+
+      fetchLiveData();
+    }
+
+    function switchTab(tabId) {
+      const detailView = document.getElementById('view-detail');
+      if (detailView) detailView.classList.add('hidden');
+
+      const tabs = ['dashboard', 'create', 'ai', 'alerts'];
+      tabs.forEach(t => {
+        const view = document.getElementById('view-' + t);
+        const btn = document.getElementById('tab-btn-' + t);
+        if (t === tabId) {
+          view.classList.remove('hidden');
+          if (btn) {
+            btn.classList.add('bg-[var(--card)]', 'text-[var(--foreground)]', 'font-semibold', 'shadow-xs');
+            btn.classList.remove('text-[var(--muted-foreground)]');
+          }
+        } else {
+          view.classList.add('hidden');
+          if (btn) {
+            btn.classList.remove('bg-[var(--card)]', 'text-[var(--foreground)]', 'font-semibold', 'shadow-xs');
+            btn.classList.add('text-[var(--muted-foreground)]');
+          }
+        }
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function fetchLiveData() {
+      if (isFetching) return;
+      isFetching = true;
+
+      const refreshIcon = document.getElementById('refresh-icon');
+      if (refreshIcon) refreshIcon.classList.add('animate-spin-fast');
+
+      const errorBanner = document.getElementById('error-banner');
+      errorBanner.classList.add('hidden');
+
+      const token = getMetaToken();
+      if (!token) {
+        showError('Chưa có Meta Access Token', 'Vui lòng nhấn nút "Đổi Token" để nhập access token của bạn.');
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin-fast');
+        isFetching = false;
+        return;
+      }
+
+      try {
+        const accsRes = await fetch(`https://graph.facebook.com/v21.0/me/adaccounts?limit=200&fields=id,name&access_token=${token}`);
+        if (!accsRes.ok) {
+          const errData = await accsRes.json();
+          throw new Error(errData.error ? errData.error.message : 'Lỗi lấy danh sách tài khoản');
+        }
+        const accsJson = await accsRes.json();
+        const allAccs = accsJson.data || [];
+
+        const aiAccs = allAccs.filter(a => a.name && a.name.includes('AI') && !EXCLUDED_ACCOUNTS.includes(a.name));
+
+        if (aiAccs.length === 0) {
+          showError('Không tìm thấy tài khoản', 'Không tìm thấy tài khoản quảng cáo nào chứa từ khóa "AI".');
+          if (refreshIcon) refreshIcon.classList.remove('animate-spin-fast');
+          isFetching = false;
+          return;
+        }
+
+        let dateQuery = 'date_preset=today';
+        if (currentDatePreset === 'yesterday') {
+          dateQuery = 'date_preset=yesterday';
+        } else if (currentDatePreset === 'last_7d') {
+          dateQuery = 'date_preset=last_7d';
+        } else if (currentDatePreset === 'custom' && currentCustomDate) {
+          dateQuery = `time_range={"since":"${currentCustomDate}","until":"${currentCustomDate}"}`;
+        }
+
+        let overallSpend = 0;
+        let overallBudget = 0;
+        let overallReg = 0;
+        let overallLinkClicks = 0;
+        let overallActiveAdsets = 0;
+
+        const accountsResult = {};
+        const badAdsetsList = [];
+
+        await Promise.all(aiAccs.map(async (acc) => {
+          try {
+            const asUrl = `https://graph.facebook.com/v21.0/${acc.id}/adsets?effective_status=['ACTIVE']&fields=id,name,daily_budget,campaign{id,name}&limit=500&access_token=${token}`;
+            const cUrl = `https://graph.facebook.com/v21.0/${acc.id}/campaigns?effective_status=['ACTIVE']&fields=id,name,daily_budget&limit=500&access_token=${token}`;
+            const insUrl = `https://graph.facebook.com/v21.0/${acc.id}/insights?${dateQuery}&level=adset&fields=adset_id,adset_name,campaign_name,spend,actions,inline_link_clicks&limit=500&access_token=${token}`;
+            const ins3dUrl = `https://graph.facebook.com/v21.0/${acc.id}/insights?date_preset=last_3d&level=adset&fields=adset_id,adset_name,spend,actions&limit=500&access_token=${token}`;
+
+            const [asRes, cRes, insRes, ins3dRes] = await Promise.all([
+              fetch(asUrl).then(r => r.json()).catch(() => ({ data: [] })),
+              fetch(cUrl).then(r => r.json()).catch(() => ({ data: [] })),
+              fetch(insUrl).then(r => r.json()).catch(() => ({ data: [] })),
+              fetch(ins3dUrl).then(r => r.json()).catch(() => ({ data: [] }))
+            ]);
+
+            const activeAdsets = asRes.data || [];
+            const activeCampaigns = cRes.data || [];
+            const insightsData = insRes.data || [];
+            const insights3dData = ins3dRes.data || [];
+
+            let accBudget = 0;
+            activeAdsets.forEach(as => {
+              if (as.daily_budget) accBudget += parseFloat(as.daily_budget);
+            });
+            activeCampaigns.forEach(c => {
+              if (c.daily_budget) accBudget += parseFloat(c.daily_budget);
+            });
+
+            const insMap = {};
+            let accSpend = 0;
+            let accReg = 0;
+            let accLinkClicks = 0;
+
+            insightsData.forEach(it => {
+              let r = 0;
+              let clk = 0;
+              if (it.actions) {
+                it.actions.forEach(a => {
+                  if (a.action_type === 'complete_registration' || a.action_type === 'omni_complete_registration') {
+                    r = parseInt(a.value || 0);
+                  }
+                  if (a.action_type === 'link_click') {
+                    clk = parseInt(a.value || 0);
+                  }
+                });
+              }
+              if (clk === 0 && it.inline_link_clicks) {
+                clk = parseInt(it.inline_link_clicks || 0);
+              }
+              const s = parseFloat(it.spend || 0);
+              accSpend += s;
+              accReg += r;
+              accLinkClicks += clk;
+
+              insMap[it.adset_id] = {
+                spend: s,
+                reg: r,
+                linkClicks: clk,
+                cr: clk > 0 ? (r / clk) * 100 : 0,
+                cpr: r > 0 ? Math.round(s / r) : 0
+              };
+            });
+
+            const adsetsDetailList = activeAdsets.map(as => {
+              const metric = insMap[as.id] || { spend: 0, reg: 0, linkClicks: 0, cr: 0, cpr: 0 };
+              return {
+                id: as.id,
+                name: as.name,
+                campaignName: as.campaign ? as.campaign.name : 'Chiến dịch',
+                budget: as.daily_budget ? parseFloat(as.daily_budget) : 0,
+                spend: metric.spend,
+                reg: metric.reg,
+                linkClicks: metric.linkClicks,
+                cr: metric.cr,
+                cpr: metric.cpr
+              };
+            });
+
+            const activeIdSet = new Set(activeAdsets.map(a => a.id));
+            insights3dData.forEach(it3d => {
+              if (activeIdSet.has(it3d.adset_id)) {
+                let r3d = 0;
+                if (it3d.actions) {
+                  it3d.actions.forEach(a => {
+                    if (a.action_type === 'complete_registration' || a.action_type === 'omni_complete_registration') {
+                      r3d = parseInt(a.value || 0);
+                    }
+                  });
+                }
+                const s3d = parseFloat(it3d.spend || 0);
+                if (r3d === 0 && s3d > 400000) {
+                  badAdsetsList.push({
+                    account: acc.name,
+                    adset: it3d.adset_name,
+                    spend3d: s3d
+                  });
+                }
+              }
+            });
+
+            const accCr = accLinkClicks > 0 ? (accReg / accLinkClicks) * 100 : 0;
+            const accCpr = accReg > 0 ? Math.round(accSpend / accReg) : 0;
+
+            accountsResult[acc.name] = {
+              id: acc.id,
+              name: acc.name,
+              activeAdsetsCount: activeAdsets.length,
+              budget: accBudget,
+              spend: accSpend,
+              reg: accReg,
+              linkClicks: accLinkClicks,
+              cr: accCr,
+              cpr: accCpr,
+              adsets: adsetsDetailList
+            };
+
+            overallSpend += accSpend;
+            overallBudget += accBudget;
+            overallReg += accReg;
+            overallLinkClicks += accLinkClicks;
+            overallActiveAdsets += activeAdsets.length;
+
+          } catch (accErr) {
+            console.warn(`Lỗi tài khoản ${acc.name}:`, accErr);
+          }
+        }));
+
+        liveAccountsData = accountsResult;
+
+        const overallCr = overallLinkClicks > 0 ? (overallReg / overallLinkClicks) * 100 : 0;
+        const overallCpr = overallReg > 0 ? Math.round(overallSpend / overallReg) : 0;
+        const pctSpend = overallBudget > 0 ? Math.round((overallSpend / overallBudget) * 100) : 0;
+
+        document.getElementById('hero-spend').innerText = formatVND(overallSpend);
+        document.getElementById('hero-budget').innerText = `/ ${formatVND(overallBudget)} dự kiến`;
+        document.getElementById('hero-progress-pct').innerText = `${pctSpend}% Đã Tiêu`;
+        document.getElementById('hero-progress-bar').style.width = `${Math.min(pctSpend, 100)}%`;
+
+        document.getElementById('hero-active-adsets').innerText = `${overallActiveAdsets} nhóm`;
+        document.getElementById('hero-reg').innerText = `${formatNumber(overallReg)} lượt`;
+        document.getElementById('hero-cr').innerText = `${overallCr.toFixed(2)}%`;
+        document.getElementById('hero-cpr').innerText = overallReg > 0 ? `${formatNumber(overallCpr)}đ` : '0 VNĐ';
+        document.getElementById('hero-link-clicks').innerText = `${formatNumber(overallLinkClicks)} lượt`;
+
+        renderChart(accountsResult);
+        renderAccountCards(accountsResult);
+        renderAlerts(badAdsetsList);
+
+        const badge = document.getElementById('api-status-badge');
+        badge.className = "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>Live';
+
+      } catch (err) {
+        console.error('Fetch error:', err);
+        showError('Không thể tải số liệu Meta API', err.message || 'Kiểm tra token hoặc kết nối mạng.');
+        const badge = document.getElementById('api-status-badge');
+        badge.className = "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/15 text-red-400 border border-red-500/30";
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-red-500 mr-1"></span>Lỗi API';
+      } finally {
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin-fast');
+        isFetching = false;
+      }
+    }
+
+    function showError(title, msg) {
+      const banner = document.getElementById('error-banner');
+      document.getElementById('error-banner-title').innerText = title;
+      document.getElementById('error-banner-desc').innerText = msg;
+      banner.classList.remove('hidden');
+    }
+
+    function renderChart(accounts) {
+      const container = document.getElementById('accounts-chart-container');
+      const sortedAccs = Object.values(accounts).sort((a, b) => b.reg - a.reg);
+
+      if (sortedAccs.length === 0) {
+        container.innerHTML = `<p class="text-center py-3 text-[var(--muted-foreground)]">Chưa có số liệu tài khoản.</p>`;
+        return;
+      }
+
+      const maxReg = Math.max(...sortedAccs.map(a => a.reg), 1);
+
+      let html = '';
+      sortedAccs.forEach((acc, idx) => {
+        const pct = Math.round((acc.reg / maxReg) * 100);
+        const isBest = idx === 0 && acc.reg > 0;
+        const tag = isBest ? '<span class="text-[10px] text-amber-400 font-bold">★ Tối ưu nhất</span>' : '';
+        const spendM = (acc.spend / 1000000).toFixed(2);
+        const cprStr = acc.reg > 0 ? `${formatNumber(acc.cpr)}đ/đơn` : '0 ĐK';
+
+        html += `
+          <div>
+            <div class="flex justify-between font-medium mb-1">
+              <span class="flex items-center gap-1"><b>${acc.name}</b> ${tag}</span>
+              <span class="text-[var(--muted-foreground)]">Chi ${spendM}M | <b class="text-blue-400">${acc.reg} ĐK</b> (${cprStr})</span>
+            </div>
+            <div class="w-full bg-[var(--secondary)] h-3 rounded-full overflow-hidden flex">
+              <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderAccountCards(accounts) {
+      const container = document.getElementById('accounts-cards-container');
+      const accList = Object.values(accounts).sort((a, b) => a.name.localeCompare(b.name));
+      document.getElementById('accounts-count-label').innerText = `${accList.length} tài khoản`;
+
+      if (accList.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-[var(--muted-foreground)]">Không có tài khoản nào.</div>`;
+        return;
+      }
+
+      let html = '';
+      accList.forEach(acc => {
+        const shortNum = acc.name.replace(/[^0-9]/g, '') || '01';
+        const spendStr = formatVND(acc.spend);
+        const cprStr = acc.reg > 0 ? formatVND(acc.cpr) : '0 VNĐ';
+
+        html += `
+          <div class="bg-[var(--card)] border border-[var(--border)] hover:border-blue-500/50 rounded-xl p-3.5 transition-all shadow-2xs space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 font-bold flex items-center justify-center text-xs">${shortNum}</span>
+                <div>
+                  <h4 class="font-bold text-sm text-[var(--foreground)] leading-none">${acc.name}</h4>
+                  <span class="text-[11px] text-emerald-400 font-medium">🟢 ${acc.activeAdsetsCount} nhóm đang chạy</span>
+                </div>
+              </div>
+              <button onclick="viewAccountDetail('${acc.name}')" class="text-xs bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer">
+                Chi tiết camp →
+              </button>
+            </div>
+            <div class="grid grid-cols-4 gap-2 pt-1 border-t border-[var(--border)] text-xs text-center">
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Đã tiêu</p>
+                <p class="font-bold text-[var(--foreground)] mt-0.5">${spendStr}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Hoàn tất ĐK</p>
+                <p class="font-bold text-blue-400 mt-0.5">${acc.reg} lượt</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Tỷ lệ CR</p>
+                <p class="font-bold text-amber-400 mt-0.5">${acc.cr.toFixed(2)}%</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Giá / ĐK</p>
+                <p class="font-bold text-emerald-400 mt-0.5">${cprStr}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function viewAccountDetail(accName) {
+      currentDetailAcc = accName;
+      const acc = liveAccountsData[accName];
+      if (!acc) return;
+
+      const shortNum = acc.name.replace(/[^0-9]/g, '') || '01';
+      const spendStr = formatVND(acc.spend);
+      const budgetStr = formatVND(acc.budget);
+      const cprStr = acc.reg > 0 ? formatVND(acc.cpr) : '0 VNĐ';
+
+      const headerHtml = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="w-9 h-9 rounded-xl bg-blue-600/20 text-blue-400 font-bold flex items-center justify-center text-sm">${shortNum}</span>
+            <div>
+              <h2 class="font-bold text-base text-[var(--foreground)] leading-tight">${acc.name}</h2>
+              <p class="text-[11px] text-emerald-400 font-medium">🟢 Tổng nhóm đang chạy: ${acc.activeAdsetsCount} nhóm</p>
+            </div>
+          </div>
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>ACTIVE
+          </span>
+        </div>
+        <div class="grid grid-cols-4 gap-2 pt-2 border-t border-[var(--border)] text-xs text-center">
+          <div class="p-2 rounded-lg bg-[var(--secondary)]">
+            <p class="text-[10px] text-[var(--muted-foreground)]">Đã tiêu</p>
+            <p class="font-bold text-sm text-[var(--foreground)] mt-0.5">${spendStr}</p>
+          </div>
+          <div class="p-2 rounded-lg bg-[var(--secondary)]">
+            <p class="text-[10px] text-[var(--muted-foreground)]">Hoàn tất ĐK</p>
+            <p class="font-bold text-sm text-blue-400 mt-0.5">${acc.reg} lượt</p>
+          </div>
+          <div class="p-2 rounded-lg bg-[var(--secondary)]">
+            <p class="text-[10px] text-[var(--muted-foreground)]">Tỷ lệ CR</p>
+            <p class="font-bold text-sm text-amber-400 mt-0.5">${acc.cr.toFixed(2)}%</p>
+          </div>
+          <div class="p-2 rounded-lg bg-[var(--secondary)]">
+            <p class="text-[10px] text-[var(--muted-foreground)]">Giá / ĐK</p>
+            <p class="font-bold text-sm text-emerald-400 mt-0.5">${cprStr}</p>
+          </div>
+        </div>
+        <div class="text-[11px] text-[var(--muted-foreground)] flex items-center justify-between pt-1">
+          <span>💵 Ngân sách dự kiến: <b>${budgetStr}/ngày</b></span>
+          <span>🔗 Click link: <b>${acc.linkClicks} lượt</b></span>
+        </div>
+      `;
+      document.getElementById('detail-account-header').innerHTML = headerHtml;
+      document.getElementById('detail-camp-count').innerText = `${acc.activeAdsetsCount} Nhóm đang chạy`;
+
+      let campsHtml = '';
+      if (acc.adsets.length === 0) {
+        campsHtml = `<div class="p-6 text-center text-xs text-[var(--muted-foreground)]">Tài khoản này hiện không có nhóm quảng cáo nào đang chạy.</div>`;
+      } else {
+        acc.adsets.forEach((as, idx) => {
+          const asSpendStr = formatVND(as.spend);
+          const asBudgetStr = as.budget > 0 ? formatVND(as.budget) : 'CBO';
+          const asCprStr = as.reg > 0 ? formatVND(as.cpr) : '0 VNĐ';
+
+          campsHtml += `
+            <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 space-y-2.5 shadow-2xs hover:border-blue-500/40 transition-all">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-xs text-[var(--foreground)]">${idx + 1}. ${as.name}</span>
+                  </div>
+                  <p class="text-[11px] text-[var(--muted-foreground)] mt-0.5">Chiến dịch: <i>${as.campaignName}</i> | Ngân sách: <b>${asBudgetStr}/ngày</b></p>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 shrink-0">
+                  🟢 Đang chạy
+                </span>
+              </div>
+              <div class="grid grid-cols-4 gap-2 p-2 rounded-lg bg-[var(--secondary)] text-xs text-center">
+                <div>
+                  <p class="text-[10px] text-[var(--muted-foreground)]">Đã tiêu</p>
+                  <p class="font-bold text-[var(--foreground)]">${asSpendStr}</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-[var(--muted-foreground)]">Lượt ĐK</p>
+                  <p class="font-bold text-blue-400">${as.reg} đơn</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-[var(--muted-foreground)]">Tỷ lệ CR</p>
+                  <p class="font-bold text-amber-400">${as.cr.toFixed(2)}%</p>
+                </div>
+                <div>
+                  <p class="text-[10px] text-[var(--muted-foreground)]">Giá / ĐK</p>
+                  <p class="font-bold text-emerald-400">${asCprStr}</p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between pt-1 text-xs">
+                <span class="text-[11px] text-[var(--muted-foreground)]">Click link: <b>${as.linkClicks} lượt</b></span>
+                <div class="flex gap-1.5">
+                  <button onclick="copyAdsetLink('${as.name}')" class="px-2.5 py-1 bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] text-[11px] font-medium rounded-md transition-all cursor-pointer">
+                    🔗 Lấy link bài
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('detail-campaigns-list').innerHTML = campsHtml;
+
+      ['dashboard', 'create', 'ai', 'alerts'].forEach(t => {
+        document.getElementById('view-' + t).classList.add('hidden');
+        const btn = document.getElementById('tab-btn-' + t);
+        if (btn) {
+          btn.classList.remove('bg-[var(--card)]', 'text-[var(--foreground)]', 'font-semibold', 'shadow-xs');
+          btn.classList.add('text-[var(--muted-foreground)]');
+        }
+      });
+      document.getElementById('view-detail').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function copyAdsetLink(asName) {
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.sendData) {
+        window.Telegram.WebApp.sendData(`Link ${asName}`);
+      } else {
+        navigator.clipboard.writeText(`Link ${asName}`);
+        alert(`Đã sao chép lệnh lấy link bài viết: Link ${asName}\nBạn có thể dán trực tiếp vào chat bot Telegram!`);
+      }
+    }
+
+    function backToDashboard() {
+      document.getElementById('view-detail').classList.add('hidden');
+      switchTab('dashboard');
+    }
+
+    function createAdForCurrentAccount() {
+      switchTab('create');
+      selectAccount(currentDetailAcc);
+    }
+
+    function renderAlerts(badList) {
+      const container = document.getElementById('alerts-list-container');
+      if (badList.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center gap-2.5 text-xs text-emerald-400">
+            <span class="text-base">✅</span>
+            <span>Hệ thống an toàn! Không có nhóm nào tiêu &gt; 400.000 VNĐ mà 0 ra đơn trong 3 ngày qua.</span>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      badList.forEach(item => {
+        html += `
+          <div class="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-xs text-[var(--foreground)] truncate pr-2">Nhóm: ${item.adset}</span>
+              <span class="text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded shrink-0">0 Đơn</span>
+            </div>
+            <div class="flex justify-between text-[11px] text-[var(--muted-foreground)]">
+              <span>Tài khoản: <b>${item.account}</b></span>
+              <span>Đã đốt: <b class="text-red-400">${formatVND(item.spend3d)}</b></span>
+            </div>
+            <div class="flex gap-2 pt-1">
+              <button onclick="copyAdsetLink('${item.adset}')" class="text-[11px] px-2.5 py-1 bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 rounded-md font-medium text-[var(--foreground)] cursor-pointer">
+                🔗 Lấy link bài viết để check
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function selectAccount(accName) {
+      selectedAcc = accName;
+      ['AI 01', 'AI 02', 'AI 03', 'AI 04', 'AI 05', 'AI 08'].forEach(a => {
+        const btn = document.getElementById('acc-btn-' + a);
+        if (btn) {
+          if (a === accName) {
+            btn.className = "py-2 px-2 rounded-xl border border-blue-500 bg-blue-600/15 text-xs font-bold text-blue-400 transition-all";
+          } else {
+            btn.className = "py-2 px-2 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-xs font-bold text-[var(--foreground)] hover:border-blue-500 transition-all";
+          }
+        }
+      });
+      document.getElementById('mockup-acc-tag').innerText = accName;
+    }
+
+    function updateMockup() {
+      const hl = document.getElementById('ad-headline-input').value;
+      const body = document.getElementById('ad-body-input').value;
+      document.getElementById('mockup-headline').innerText = hl || 'TIÊU ĐỀ QUẢNG CÁO';
+      document.getElementById('mockup-body').innerText = body || 'Nội dung bài viết quảng cáo...';
+    }
+
+    function submitAd() {
+      const headline = document.getElementById('ad-headline-input').value;
+      const body = document.getElementById('ad-body-input').value;
+      const cmd = `Tài khoản: ${selectedAcc}\nTiêu đề: ${headline}\nNội dung: ${body}`;
+      
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.sendData) {
+        window.Telegram.WebApp.sendData(cmd);
+      } else {
+        alert(`🎉 Đã chuẩn bị bản nháp ABO 250k trên tài khoản ${selectedAcc}!\nTiêu đề: ${headline}\n\nBạn có thể gửi lệnh vào chat bot Telegram hoặc mở Ads Manager để duyệt.`);
+      }
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const chatBox = document.getElementById('chat-box');
+      const userMsg = document.createElement('div');
+      userMsg.className = 'flex justify-end';
+      userMsg.innerHTML = `<div class="bg-blue-600 text-white rounded-xl rounded-tr-xs p-2.5 max-w-[85%] leading-relaxed">${escapeHtml(text)}</div>`;
+      chatBox.appendChild(userMsg);
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      setTimeout(() => {
+        let aiReply = '';
+        if (text.toLowerCase().includes('scale') || text.toLowerCase().includes('tăng')) {
+          aiReply = `Dạ anh Huy ơi, theo số liệu thực tế, các tài khoản có CPR rẻ và CR tốt là ứng cử viên số 1 để scale! Bạn có thể nâng nhẹ 15% ngân sách các nhóm này rất an toàn qua Telegram.`;
+        } else if (text.toLowerCase().includes('tiêu đề') || text.toLowerCase().includes('content')) {
+          aiReply = `Gợi ý 3 tiêu đề chuyển đổi cao cho bạn:\n1. <i>"Con tự tin nói tiếng Anh sau 3 tháng với giáo viên AI 1-1"</i>\n2. <i>"Đừng để con sợ tiếng Anh - Lộ trình chuẩn bản xứ cho bé 6-13 tuổi"</i>\n3. <i>"Suất học bổng tiếng Anh AI cuối cùng trong tháng - Nhận ngay!"</i>`;
+        } else {
+          aiReply = `Em đã ghi nhận câu hỏi của bạn! Với Gemini 3.8 Flash tích hợp trên bot Telegram, bạn chỉ cần gửi câu này trực tiếp vào chat bot Telegram là em sẽ phân tích số liệu thời gian thực để tư vấn cho bạn ngay nhé!`;
+        }
+
+        const aiMsg = document.createElement('div');
+        aiMsg.className = 'flex gap-2';
+        aiMsg.innerHTML = `<div class="w-6 h-6 rounded-full bg-purple-600/20 text-purple-400 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">AI</div><div class="bg-[var(--secondary)] rounded-xl rounded-tl-xs p-2.5 max-w-[85%] text-[var(--foreground)] leading-relaxed whitespace-pre-line">${aiReply}</div>`;
+        chatBox.appendChild(aiMsg);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }, 500);
+    }
+
+    function sendQuickPrompt(promptText) {
+      document.getElementById('chat-input').value = promptText;
+      sendChatMessage();
+    }
+
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') sendChatMessage();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchLiveData();
+    });
+  </script>
+</body>
+</html>
