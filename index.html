@@ -39,7 +39,7 @@
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>Live
           </span>
         </div>
-        <p class="text-[11px] text-[var(--muted-foreground)]">Trợ Lý AI & Quản Trị Ads</p>
+        <p class="text-[11px] text-[var(--muted-foreground)]">Trợ Lý AI & Quản Trị Ads <span id="last-update-time" class="opacity-60"></span></p>
       </div>
     </div>
     <div class="flex items-center gap-2">
@@ -419,6 +419,8 @@
     let currentDetailAcc = 'AI 02';
     let liveAccountsData = {};
     let isFetching = false;
+    let lastFetchTime = null;
+    let autoRefreshTimer = null;
 
     function getMetaToken() {
       const hash = window.location.hash;
@@ -692,6 +694,7 @@
                   badAdsetsList.push({
                     account: acc.name,
                     adset: it3d.adset_name,
+                    adsetId: it3d.adset_id,
                     spend3d: s3d
                   });
                 }
@@ -745,6 +748,15 @@
         renderChart(accountsResult);
         renderAccountCards(accountsResult);
         renderAlerts(badAdsetsList);
+
+        // Re-render detail view if currently visible
+        if (!document.getElementById('view-detail').classList.contains('hidden') && currentDetailAcc && liveAccountsData[currentDetailAcc]) {
+          viewAccountDetail(currentDetailAcc);
+        }
+
+        // Update last refresh timestamp
+        lastFetchTime = new Date();
+        updateTimestamp();
 
         const badge = document.getElementById('api-status-badge');
         badge.className = "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
@@ -954,6 +966,9 @@
                   <button onclick="copyAdsetLink('${as.name}')" class="px-2.5 py-1 bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] text-[11px] font-medium rounded-md transition-all cursor-pointer">
                     🔗 Lấy link bài
                   </button>
+                  <button onclick="pauseAdset('${as.id}')" class="px-2.5 py-1 bg-red-500/15 hover:bg-red-500/25 text-red-400 text-[11px] font-semibold rounded-md transition-all cursor-pointer border border-red-500/30">
+                    ⏸️ Tắt nhóm
+                  </button>
                 </div>
               </div>
             </div>
@@ -1021,6 +1036,9 @@
             <div class="flex gap-2 pt-1">
               <button onclick="copyAdsetLink('${item.adset}')" class="text-[11px] px-2.5 py-1 bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 rounded-md font-medium text-[var(--foreground)] cursor-pointer">
                 🔗 Lấy link bài viết để check
+              </button>
+              <button onclick="pauseAdset('${item.adsetId}')" class="text-[11px] px-2.5 py-1 bg-red-500/15 hover:bg-red-500/25 rounded-md font-semibold text-red-400 cursor-pointer border border-red-500/30">
+                ⏸️ Tắt nhóm này
               </button>
             </div>
           </div>
@@ -1109,8 +1127,72 @@
       return div.innerHTML;
     }
 
+    function updateTimestamp() {
+      const el = document.getElementById('last-update-time');
+      if (lastFetchTime && el) {
+        const h = String(lastFetchTime.getHours()).padStart(2, '0');
+        const m = String(lastFetchTime.getMinutes()).padStart(2, '0');
+        el.innerText = `· 🕐 ${h}:${m}`;
+      }
+    }
+
+    async function pauseAdset(adsetId) {
+      if (!adsetId) return;
+
+      let adsetName = adsetId;
+      let accountName = '';
+      for (const [accName, accData] of Object.entries(liveAccountsData)) {
+        const found = accData.adsets.find(a => a.id === adsetId);
+        if (found) {
+          adsetName = found.name;
+          accountName = accName;
+          break;
+        }
+      }
+
+      const msg = `Bạn có chắc muốn TẮT nhóm quảng cáo:\n"${adsetName}"\nthuộc tài khoản ${accountName}?\n\nNhóm sẽ chuyển sang trạng thái PAUSED.`;
+
+      const doPause = async () => {
+        try {
+          const token = getMetaToken();
+          const res = await fetch(`https://graph.facebook.com/v21.0/${adsetId}?status=PAUSED&access_token=${token}`, { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            const successMsg = `✅ Đã tắt nhóm "${adsetName}" thành công!\nĐang cập nhật lại số liệu...`;
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+              window.Telegram.WebApp.showAlert(successMsg);
+            } else {
+              alert(successMsg);
+            }
+            fetchLiveData();
+          } else {
+            throw new Error(data.error ? data.error.message : 'Không thể tắt nhóm quảng cáo');
+          }
+        } catch (err) {
+          const errMsg = `❌ Lỗi khi tắt nhóm: ${err.message}`;
+          if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showAlert) {
+            window.Telegram.WebApp.showAlert(errMsg);
+          } else {
+            alert(errMsg);
+          }
+        }
+      };
+
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showConfirm) {
+        window.Telegram.WebApp.showConfirm(msg, (confirmed) => {
+          if (confirmed) doPause();
+        });
+      } else {
+        if (confirm(msg)) doPause();
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       fetchLiveData();
+      // Auto-refresh mỗi 10 phút
+      autoRefreshTimer = setInterval(() => {
+        fetchLiveData();
+      }, 10 * 60 * 1000);
     });
   </script>
 </body>
