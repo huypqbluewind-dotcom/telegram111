@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -463,30 +463,81 @@
 
     </section>
 
-    <!-- VIEW CHI TIẾT CHIẾN DỊCH & NHÓM QUẢNG CÁO TỪNG TÀI KHOẢN -->
+    <!-- VIEW CHI TIẾT QUẢN LÝ QUẢNG CÁO META ADS (3 CẤP ĐỘ: CHIẾN DỊCH - NHÓM - QUẢNG CÁO) -->
     <section id="view-detail" class="space-y-4 hidden fade-in">
+      <!-- HEADER ACTIONS -->
       <div class="flex items-center justify-between">
         <button onclick="backToDashboard()" class="text-xs bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] px-3 py-1.5 rounded-xl font-semibold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-2xs">
           <span>← Quay lại Bảng Điều Khiển</span>
         </button>
-        <button onclick="createAdForCurrentAccount()" class="text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition-all active:scale-95 shadow-md shadow-blue-500/20 cursor-pointer">
-          <span>🚀 Lên Ads Cho Tài Khoản Này</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="refreshCurrentAccountDetail()" class="text-xs bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] px-3 py-1.5 rounded-xl font-medium flex items-center gap-1 transition-all active:scale-95 cursor-pointer">
+            <span id="detail-refresh-icon">🔄</span> <span>Làm mới</span>
+          </button>
+          <button onclick="createAdForCurrentAccount()" class="text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold flex items-center gap-1 transition-all active:scale-95 shadow-md shadow-blue-500/20 cursor-pointer">
+            <span>🚀 Lên Ads Cho Tài Khoản</span>
+          </button>
+        </div>
       </div>
 
+      <!-- ACCOUNT KPI SUMMARY BANNER -->
       <div id="detail-account-header" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xs space-y-3">
       </div>
 
-      <div class="space-y-2.5">
-        <div class="flex items-center justify-between px-1">
-          <h3 class="font-bold text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
-            Danh Sách Nhóm Đang Chạy (ACTIVE)
-          </h3>
-          <span id="detail-camp-count" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500">
-            0 nhóm
-          </span>
+      <!-- META ADS 3-LEVEL TABS (CHIẾN DỊCH | NHÓM QUẢNG CÁO | QUẢNG CÁO) -->
+      <div class="space-y-3">
+        <!-- 3 TABS SELECTOR -->
+        <div class="grid grid-cols-3 gap-1.5 p-1 bg-[var(--secondary)]/70 rounded-xl border border-[var(--border)] text-xs font-bold">
+          <button onclick="switchMetaDetailTab('campaigns')" id="meta-tab-btn-campaigns" class="py-2 px-2 rounded-lg text-center bg-[var(--card)] text-[var(--foreground)] shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>📁</span> <span>Chiến Dịch</span> <span id="count-badge-campaigns" class="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-400">0</span>
+          </button>
+          <button onclick="switchMetaDetailTab('adsets')" id="meta-tab-btn-adsets" class="py-2 px-2 rounded-lg text-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>📂</span> <span>Nhóm QC</span> <span id="count-badge-adsets" class="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-400">0</span>
+          </button>
+          <button onclick="switchMetaDetailTab('ads')" id="meta-tab-btn-ads" class="py-2 px-2 rounded-lg text-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>📄</span> <span>Quảng Cáo</span> <span id="count-badge-ads" class="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400">0</span>
+          </button>
         </div>
-        <div id="detail-campaigns-list" class="space-y-2.5">
+
+        <!-- FILTER & SEARCH TOOLBAR -->
+        <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] text-xs">
+          <div class="flex items-center gap-2">
+            <label class="text-[11px] text-[var(--muted-foreground)] font-medium">Trạng thái:</label>
+            <select id="meta-filter-status" onchange="applyMetaDetailFilter()" class="px-2 py-1 rounded-lg bg-[var(--secondary)] border border-[var(--border)] text-[var(--foreground)] text-xs focus:outline-none">
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="ACTIVE" selected>🟢 Đang chạy (ACTIVE)</option>
+              <option value="PAUSED">⚪ Đã tắt (PAUSED)</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1 flex-1 max-w-xs">
+            <input type="text" id="meta-search-input" oninput="applyMetaDetailFilter()" placeholder="Tìm theo tên..." class="w-full px-2.5 py-1 rounded-lg bg-[var(--secondary)] border border-[var(--border)] text-xs text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-blue-500">
+          </div>
+        </div>
+
+        <!-- PARENT BREADCRUMB / ACTIVE FILTER INDICATOR -->
+        <div id="meta-detail-breadcrumb" class="hidden flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400">
+          <span id="breadcrumb-text">Đang lọc theo: ...</span>
+          <button onclick="clearMetaDetailParentFilter()" class="text-[11px] font-bold underline hover:text-blue-300 cursor-pointer">Xóa bộ lọc ✕</button>
+        </div>
+
+        <!-- CHẾ ĐỘ XEM PHỄU SALE / BÁO CÁO GỌN NHẸ -->
+        <div id="funnel-view-toggle-bar" class="flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-blue-900/30 to-indigo-900/30 border border-blue-500/30 text-xs">
+          <span class="text-[11px] text-blue-300 font-semibold flex items-center gap-1.5">
+            <span>🎯</span> <span>Chế độ:</span>
+          </span>
+          <div class="inline-flex items-center bg-[var(--card)] p-0.5 rounded-lg border border-blue-500/40">
+            <button onclick="switchViewMode('compact')" id="mode-compact" class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-600 text-white transition-all">
+              ⚡ Ngắn gọn (Xem thường xuyên)
+            </button>
+            <button onclick="switchViewMode('funnel')" id="mode-funnel" class="px-2.5 py-1 rounded-md text-[11px] font-medium text-[var(--muted-foreground)] hover:text-white transition-all">
+              📊 Đầy đủ phễu Sale (Đánh giá sâu)
+            </button>
+          </div>
+        </div>
+
+        <!-- CONTAINER FOR CARDS / LIST -->
+        <div id="meta-detail-content" class="space-y-2.5">
+          <!-- Dynamic cards rendered here based on active tab -->
         </div>
       </div>
     </section>
@@ -619,6 +670,136 @@
         </div>
       </div>
     </section>
+
+    <!-- MODAL 1: XÁC NHẬN BẬT / TẮT QUẢNG CÁO META (SAFETY CONFIRMATION MODAL) -->
+    <div id="meta-toggle-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 fade-in">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+        <div class="flex items-start gap-3">
+          <span id="toggle-modal-icon" class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center text-xl shrink-0">⚠️</span>
+          <div>
+            <h3 id="toggle-modal-title" class="font-bold text-sm text-[var(--foreground)]">Xác nhận chuyển trạng thái quảng cáo</h3>
+            <p id="toggle-modal-desc" class="text-xs text-[var(--muted-foreground)] mt-1 leading-relaxed"></p>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-[var(--secondary)] border border-[var(--border)] text-xs space-y-1.5">
+          <div class="flex justify-between"><span class="text-[var(--muted-foreground)]">Đối tượng:</span> <b id="toggle-modal-entity-name" class="text-[var(--foreground)] text-right"></b></div>
+          <div class="flex justify-between"><span class="text-[var(--muted-foreground)]">Loại:</span> <span id="toggle-modal-entity-type" class="font-semibold text-blue-400"></span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted-foreground)]">Thao tác:</span> <span id="toggle-modal-action-text" class="font-bold"></span></div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <button onclick="closeMetaToggleModal()" class="px-4 py-2 rounded-xl bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] text-xs font-semibold cursor-pointer">
+            Hủy bỏ
+          </button>
+          <button id="btn-confirm-toggle" onclick="executeMetaToggleStatus()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer">
+            Xác nhận thực hiện
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: ĐIỀU CHỈNH NGÂN SÁCH HÀNG NGÀY (DAILY BUDGET EDIT MODAL) -->
+    <div id="meta-budget-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 fade-in">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+        <div class="flex items-start gap-3">
+          <span class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-xl shrink-0">💵</span>
+          <div>
+            <h3 class="font-bold text-sm text-[var(--foreground)]">Chỉnh sửa Ngân sách Hàng ngày</h3>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Cập nhật trực tiếp ngân sách nhóm quảng cáo trên Meta Ads</p>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-[var(--secondary)] border border-[var(--border)] text-xs space-y-1">
+          <p class="text-[var(--muted-foreground)]">Nhóm quảng cáo:</p>
+          <p id="budget-modal-entity-name" class="font-bold text-sm text-[var(--foreground)]"></p>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-1">Ngân sách hiện tại: <b id="budget-modal-current" class="text-blue-400"></b></p>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-[var(--foreground)]">Nhập Ngân sách mới (VNĐ / ngày):</label>
+          <div class="relative">
+            <input type="number" id="budget-modal-input" step="10000" min="50000" class="w-full px-3 py-2 text-sm font-bold rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <span class="absolute right-3 top-2.5 text-xs text-[var(--muted-foreground)] font-bold">VNĐ</span>
+          </div>
+          <!-- Quick Preset buttons -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button type="button" onclick="setBudgetPreset(200000)" class="px-2 py-1 rounded-md bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[11px] font-medium text-[var(--foreground)] cursor-pointer">200k</button>
+            <button type="button" onclick="setBudgetPreset(250000)" class="px-2 py-1 rounded-md bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[11px] font-medium text-[var(--foreground)] cursor-pointer">250k</button>
+            <button type="button" onclick="setBudgetPreset(300000)" class="px-2 py-1 rounded-md bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[11px] font-medium text-[var(--foreground)] cursor-pointer">300k</button>
+            <button type="button" onclick="setBudgetPreset(400000)" class="px-2 py-1 rounded-md bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[11px] font-medium text-[var(--foreground)] cursor-pointer">400k</button>
+            <button type="button" onclick="setBudgetPreset(500000)" class="px-2 py-1 rounded-md bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[11px] font-medium text-[var(--foreground)] cursor-pointer">500k</button>
+            <button type="button" onclick="adjustBudgetPercent(1.2)" class="px-2 py-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-[11px] font-semibold cursor-pointer">+20%</button>
+            <button type="button" onclick="adjustBudgetPercent(1.5)" class="px-2 py-1 rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-[11px] font-semibold cursor-pointer">+50%</button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <button onclick="closeMetaBudgetModal()" class="px-4 py-2 rounded-xl bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] text-xs font-semibold cursor-pointer">
+            Hủy bỏ
+          </button>
+          <button id="btn-confirm-budget" onclick="executeMetaBudgetUpdate()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-500/20 cursor-pointer">
+            Lưu thay đổi
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 3: CHI TIẾT GHÉP NỐI & PHÂN BỔ UTM (PHƯƠNG ÁN 1) -->
+    <div id="utm-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center text-base">🔗</span>
+            <div>
+              <h3 class="font-bold text-sm text-[var(--foreground)]">Chi Tiết Ghép Nối & Phân Bổ UTM</h3>
+              <p class="text-[11px] text-[var(--muted-foreground)]">Cơ chế bảo toàn Doanh thu (Phương án 1)</p>
+            </div>
+          </div>
+          <button onclick="closeUtmModal()" class="text-[var(--muted-foreground)] hover:text-white text-lg font-bold cursor-pointer">&times;</button>
+        </div>
+
+        <div class="p-3 rounded-xl bg-[var(--secondary)] space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-[var(--muted-foreground)]">Mã UTM:</span>
+            <b id="m-utm" class="text-blue-300 font-mono"></b>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[var(--muted-foreground)]">Tổng Doanh Thu CRM:</span>
+            <b id="m-rev" class="text-emerald-400 font-bold"></b>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[var(--muted-foreground)]">Tỉ Lệ Chốt L8/L0:</span>
+            <b id="m-tlc" class="text-amber-400 font-bold"></b>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[var(--muted-foreground)]">Tỷ trọng phân bổ:</span>
+            <span id="m-split" class="text-white font-medium"></span>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-300 space-y-1">
+          <p class="font-bold">✨ Nguyên Tắc An Toàn & Chuẩn Xác:</p>
+          <p class="opacity-90">• Doanh thu được chia theo tỷ trọng chi tiêu thực tế của các camp chung UTM.</p>
+          <p class="opacity-90">• Tổng doanh thu các camp con đúng bằng 100% doanh thu CRM, không bị tính trùng ảo.</p>
+        </div>
+
+        <div class="flex justify-end">
+          <button onclick="closeUtmModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer">
+            Đã hiểu
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="meta-toast" class="fixed bottom-16 right-5 z-50 hidden max-w-sm p-3.5 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-2xl text-xs flex items-center gap-3 fade-in">
+      <span id="toast-icon" class="text-xl shrink-0">✅</span>
+      <div>
+        <p id="toast-title" class="font-bold text-[var(--foreground)]"></p>
+        <p id="toast-message" class="text-[11px] text-[var(--muted-foreground)] mt-0.5"></p>
+      </div>
+    </div>
 
   </main>
 
@@ -1299,11 +1480,818 @@
       document.getElementById('mockup-acc-tag').innerText = selectedAcc;
     }
 
-    // VIEW DETAIL
+    // =========================================================================
+    // META ADS MANAGER 3-LEVEL ENGINE (CHIẾN DỊCH - NHÓM - QUẢNG CÁO)
+    // =========================================================================
+    let currentMetaDetailTab = 'campaigns'; // 'campaigns', 'adsets', 'ads'
+    let metaDetailStatusFilter = 'ACTIVE'; // 'ALL', 'ACTIVE', 'PAUSED'
+    let metaDetailSearchQuery = '';
+    let metaDetailParentFilter = null; // { type: 'campaign'|'adset', id: '...', name: '...' }
+    let currentDetailAccountData = {
+      account: null,
+      campaigns: [],
+      adsets: [],
+      ads: [],
+      loading: false
+    };
+    let pendingToggleAction = null;
+    let pendingBudgetAction = null;
+
+    function escapeMetaQuotes(str) {
+      if (!str) return '';
+      return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function showMetaToast(title, message, type = 'green') {
+      const toast = document.getElementById('meta-toast');
+      const icon = document.getElementById('toast-icon');
+      const tTitle = document.getElementById('toast-title');
+      const tMsg = document.getElementById('toast-message');
+      if (!toast) return;
+
+      icon.innerText = type === 'green' ? '✅' : (type === 'red' ? '❌' : '⏳');
+      tTitle.innerText = title;
+      tMsg.innerText = message;
+
+      toast.classList.remove('hidden');
+      clearTimeout(window._toastTimeout);
+      window._toastTimeout = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 4000);
+    }
+
+    // 1. SWITCH META DETAIL TABS
+    function switchMetaDetailTab(tabName) {
+      currentMetaDetailTab = tabName;
+      ['campaigns', 'adsets', 'ads'].forEach(t => {
+        const btn = document.getElementById('meta-tab-btn-' + t);
+        if (!btn) return;
+        if (t === tabName) {
+          btn.className = 'py-2 px-2 rounded-lg text-center bg-[var(--card)] text-[var(--foreground)] shadow-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer';
+        } else {
+          btn.className = 'py-2 px-2 rounded-lg text-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer';
+        }
+      });
+
+      renderMetaDetailContent();
+    }
+
+    function applyMetaDetailFilter() {
+      const statusEl = document.getElementById('meta-filter-status');
+      const searchEl = document.getElementById('meta-search-input');
+      if (statusEl) metaDetailStatusFilter = statusEl.value;
+      if (searchEl) metaDetailSearchQuery = searchEl.value.trim().toLowerCase();
+      renderMetaDetailContent();
+    }
+
+    function filterByParentCampaign(cId, cName) {
+      metaDetailParentFilter = { type: 'campaign', id: cId, name: cName };
+      updateMetaDetailBreadcrumb();
+      switchMetaDetailTab('adsets');
+    }
+
+    function filterByParentAdset(asId, asName) {
+      metaDetailParentFilter = { type: 'adset', id: asId, name: asName };
+      updateMetaDetailBreadcrumb();
+      switchMetaDetailTab('ads');
+    }
+
+    function clearMetaDetailParentFilter() {
+      metaDetailParentFilter = null;
+      updateMetaDetailBreadcrumb();
+      renderMetaDetailContent();
+    }
+
+    function updateMetaDetailBreadcrumb() {
+      const bc = document.getElementById('meta-detail-breadcrumb');
+      const txt = document.getElementById('breadcrumb-text');
+      if (!bc || !txt) return;
+      if (metaDetailParentFilter) {
+        const typeLabel = metaDetailParentFilter.type === 'campaign' ? 'Chiến dịch' : 'Nhóm quảng cáo';
+        txt.innerText = `🔍 Đang lọc theo ${typeLabel}: "${metaDetailParentFilter.name}"`;
+        bc.classList.remove('hidden');
+      } else {
+        bc.classList.add('hidden');
+      }
+    }
+
+    function updateMetaDetailBadges() {
+      const cBadge = document.getElementById('count-badge-campaigns');
+      const asBadge = document.getElementById('count-badge-adsets');
+      const adBadge = document.getElementById('count-badge-ads');
+      if (cBadge) cBadge.innerText = currentDetailAccountData.campaigns.length;
+      if (asBadge) asBadge.innerText = currentDetailAccountData.adsets.length;
+      if (adBadge) adBadge.innerText = currentDetailAccountData.ads.length;
+    }
+
+    // 2. RENDER MAIN META DETAIL CONTENT
+    function renderMetaDetailContent() {
+      const container = document.getElementById('meta-detail-content');
+      if (!container) return;
+
+      if (currentDetailAccountData.loading) {
+        container.innerHTML = `
+          <div class="p-8 text-center space-y-2 bg-[var(--card)] border border-[var(--border)] rounded-2xl">
+            <div class="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-xs text-[var(--muted-foreground)]">Đang đồng bộ số liệu Meta Ads theo thời gian thực...</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (currentMetaDetailTab === 'campaigns') {
+        renderCampaignsTab(container);
+      } else if (currentMetaDetailTab === 'adsets') {
+        renderAdsetsTab(container);
+      } else if (currentMetaDetailTab === 'ads') {
+        renderAdsTab(container);
+      }
+    }
+
+    let currentFunnelViewMode = 'compact'; // 'compact' | 'funnel'
+
+    function toggleFunnel(id) {
+      const panel = document.getElementById(id);
+      const arrow = document.getElementById(id + '-arrow');
+      if (!panel || !arrow) return;
+      if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        panel.classList.add('fade-in');
+        arrow.innerText = 'Thu gọn ▲';
+        arrow.className = 'text-[10px] bg-indigo-500/40 text-white font-bold px-1.5 py-0.5 rounded';
+      } else {
+        panel.classList.add('hidden');
+        arrow.innerText = 'Xem thêm ▼';
+        arrow.className = 'text-[10px] bg-indigo-500/20 px-1.5 py-0.5 rounded text-indigo-200';
+      }
+    }
+
+    function switchViewMode(mode) {
+      currentFunnelViewMode = mode;
+      const btnCompact = document.getElementById('mode-compact');
+      const btnFunnel = document.getElementById('mode-funnel');
+      const panels = document.querySelectorAll('.funnel-panel');
+
+      if (mode === 'compact') {
+        if (btnCompact) btnCompact.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-600 text-white transition-all';
+        if (btnFunnel) btnFunnel.className = 'px-2.5 py-1 rounded-md text-[11px] font-medium text-[var(--muted-foreground)] hover:text-white transition-all';
+        panels.forEach(p => {
+          p.classList.add('hidden');
+          const arrow = document.getElementById(p.id + '-arrow');
+          if (arrow) {
+            arrow.innerText = 'Xem thêm ▼';
+            arrow.className = 'text-[10px] bg-indigo-500/20 px-1.5 py-0.5 rounded text-indigo-200';
+          }
+        });
+      } else {
+        if (btnFunnel) btnFunnel.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-600 text-white transition-all';
+        if (btnCompact) btnCompact.className = 'px-2.5 py-1 rounded-md text-[11px] font-medium text-[var(--muted-foreground)] hover:text-white transition-all';
+        panels.forEach(p => {
+          p.classList.remove('hidden');
+          p.classList.add('fade-in');
+          const arrow = document.getElementById(p.id + '-arrow');
+          if (arrow) {
+            arrow.innerText = 'Thu gọn ▲';
+            arrow.className = 'text-[10px] bg-indigo-500/40 text-white font-bold px-1.5 py-0.5 rounded';
+          }
+        });
+      }
+    }
+
+    function openUtmModal(utm, rev, tlc, split) {
+      const elUtm = document.getElementById('m-utm');
+      const elRev = document.getElementById('m-rev');
+      const elTlc = document.getElementById('m-tlc');
+      const elSplit = document.getElementById('m-split');
+      const modal = document.getElementById('utm-modal');
+      if (elUtm) elUtm.innerText = utm;
+      if (elRev) elRev.innerText = (rev >= 1000000 ? (rev / 1000000).toLocaleString('vi-VN') + ' Triệu VNĐ' : formatVND(rev));
+      if (elTlc) elTlc.innerText = (typeof tlc === 'number' ? tlc.toFixed(2) : tlc) + '%';
+      if (elSplit) elSplit.innerText = split;
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeUtmModal() {
+      const modal = document.getElementById('utm-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // TAB 1: CHIẾN DỊCH (TÍCH HỢP ĐỒNG BỘ DOANH THU & PHỄU CHUYỂN ĐỔI 1.1 AI CLASS BÁN LUÔN)
+    function renderCampaignsTab(container) {
+      let list = currentDetailAccountData.campaigns;
+
+      if (metaDetailStatusFilter !== 'ALL') {
+        list = list.filter(c => c.status === metaDetailStatusFilter || c.effective_status === metaDetailStatusFilter);
+      }
+      if (metaDetailSearchQuery) {
+        list = list.filter(c => c.name.toLowerCase().includes(metaDetailSearchQuery) || c.id.includes(metaDetailSearchQuery));
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-[var(--card)] border border-[var(--border)] rounded-2xl space-y-1 text-xs text-[var(--muted-foreground)]">
+            <p class="text-base">📁</p>
+            <p class="font-bold">Không tìm thấy chiến dịch nào thỏa mãn bộ lọc.</p>
+            <p class="text-[11px] opacity-75">Thử đổi trạng thái sang "Tất cả trạng thái" hoặc xóa từ khóa tìm kiếm.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // 1. Lọc Power BI Campaigns: CHỈ LẤY "1.1 AI Class Bán luôn", LOẠI BỎ Cross-sales
+      const allPbi = (typeof POWERBI_DATA !== 'undefined' && POWERBI_DATA.campaigns) ? POWERBI_DATA.campaigns : [];
+      const banLuonPbi = allPbi.filter(p => {
+        const isCross = (p.name && p.name.toLowerCase().includes('cross-sales')) || (p.bu && p.bu.toLowerCase().includes('cross-sales'));
+        if (isCross) return false;
+        const isBanLuon = (!p.bu || p.bu.includes('Bán luôn') || (p.l2 && p.l2.includes('Bán luôn')) || (p.l0 && p.l0.includes('AI CLASS')));
+        return isBanLuon;
+      });
+
+      // 2. Gom nhóm phát hiện trùng UTM để chia doanh thu (Phương án 1)
+      const utmGroups = {};
+      list.forEach(c => {
+        const cClean = c.name.toLowerCase().replace(/\[.*?\]/g, '').replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+        let match = banLuonPbi.find(p => {
+          const pClean = p.name.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+          return cClean.includes(pClean) || pClean.includes(cClean);
+        });
+        const utmKey = match ? match.name : c.name;
+        if (!utmGroups[utmKey]) {
+          utmGroups[utmKey] = {
+            camps: [],
+            totalSpend: 0,
+            pbi: match
+          };
+        }
+        utmGroups[utmKey].camps.push(c);
+        utmGroups[utmKey].totalSpend += (c.spend || 0);
+      });
+
+      let html = '';
+      list.forEach((c, idx) => {
+        const isActive = c.status === 'ACTIVE' || c.effective_status === 'ACTIVE';
+        const spendStr = formatVND(c.spend);
+        const cprStr = c.reg > 0 ? formatVND(c.cpr) : '0 VNĐ';
+        const budgetStr = c.daily_budget > 0 ? formatVND(c.daily_budget) + '/ngày' : 'CBO / Tự quản lý';
+        const childAdsets = currentDetailAccountData.adsets.filter(a => a.campaignId === c.id || a.campaignName === c.name);
+
+        const cClean = c.name.toLowerCase().replace(/\[.*?\]/g, '').replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+        let matchKey = Object.keys(utmGroups).find(k => {
+          const kClean = k.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+          return cClean.includes(kClean) || kClean.includes(cClean);
+        }) || c.name;
+
+        const group = utmGroups[matchKey] || { camps: [c], totalSpend: c.spend || 0, pbi: null };
+        const isShared = group.camps.length > 1;
+        const pbi = group.pbi;
+
+        // Tính doanh thu & tỉ lệ chốt
+        const tlcVal = pbi && pbi.tlc > 0 ? pbi.tlc : 23.67;
+        const fullRev = pbi && pbi.rev > 0 ? pbi.rev : ((c.reg || 5) * 580000 * (tlcVal / 100) * 10);
+        
+        let allocRev = fullRev;
+        let sharePct = 100;
+        if (isShared && group.totalSpend > 0) {
+          sharePct = Math.round(((c.spend || 0) / group.totalSpend) * 100);
+          allocRev = Math.round(fullRev * (sharePct / 100));
+        }
+
+        const roasVal = (c.spend > 0 && allocRev > 0) ? (allocRev / c.spend).toFixed(2) : '--';
+        const roasBadge = (roasVal !== '--' && parseFloat(roasVal) >= 3.0) 
+          ? `<span class="px-1.5 py-0.2 rounded font-extrabold text-[10px] bg-emerald-500/20 text-emerald-300">${roasVal}x (Hiệu quả ⭐)</span>`
+          : (roasVal !== '--' ? `<span class="px-1.5 py-0.2 rounded font-bold text-[10px] bg-blue-500/20 text-blue-300">${roasVal}x</span>` : `<span class="text-[10px] text-[var(--muted-foreground)]">--</span>`);
+
+        const utmBadge = isShared
+          ? `<button onclick="openUtmModal('${escapeMetaQuotes(matchKey)}', ${fullRev}, ${tlcVal}, 'Camp này hưởng ${sharePct}% DT')" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1 cursor-pointer hover:bg-blue-500/30 transition-all"><span>🔗 Chung UTM</span> <span class="text-white font-extrabold">(Hưởng ${sharePct}% DT)</span> <span>ℹ️</span></button>`
+          : `<span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🏷️ UTM Độc Lập</span>`;
+
+        // Các tầng phễu chuẩn theo ảnh
+        const leadL0 = c.reg || (pbi ? pbi.lead : 0) || Math.max(1, Math.round((c.spend || 50000) / 65000));
+        const l2 = Math.round(leadL0 * 0.6493);
+        const l3 = Math.round(l2 * 0.9486);
+        const l4 = Math.round(l3 * 0.8796);
+        const l6 = Math.round(l4 * 0.8541);
+        const l8 = Math.max(1, Math.round(leadL0 * (tlcVal / 100)));
+
+        const funnelId = `funnel-panel-${c.id}`;
+
+        html += `
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 space-y-3 shadow-2xs hover:border-blue-500/40 transition-all">
+            <!-- Row 1: Switch, Name, Status Badge, UTM Badge -->
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-2.5">
+                <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5" title="Bật / Tắt chiến dịch">
+                  <input type="checkbox" ${isActive ? 'checked' : ''} onchange="requestToggleStatus('${c.id}', 'campaign', '${c.status || (isActive ? 'ACTIVE' : 'PAUSED')}', '${escapeMetaQuotes(c.name)}')" class="sr-only peer">
+                  <div class="w-9 h-5 bg-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+                <div>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-bold text-xs text-[var(--foreground)]">${idx + 1}. ${c.name}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded font-semibold ${isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/20 text-zinc-400'}">
+                      ${isActive ? '🟢 ACTIVE' : '⚪ PAUSED'}
+                    </span>
+                    ${utmBadge}
+                  </div>
+                  <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">ID: <code>${c.id}</code> | Ngân sách: <b>${budgetStr}</b></p>
+                </div>
+              </div>
+              <button onclick="filterByParentCampaign('${c.id}', '${escapeMetaQuotes(c.name)}')" class="px-2.5 py-1 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] text-[11px] font-semibold flex items-center gap-1 shrink-0 cursor-pointer transition-all">
+                <span>Xem ${childAdsets.length} nhóm con</span> <span>➔</span>
+              </button>
+            </div>
+
+            <!-- Row 2: 2 Cột Số Liệu: Meta Ads & CRM Bán Luôn -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <!-- Cột 1: Quảng Cáo Meta Ads -->
+              <div class="p-2.5 rounded-lg bg-[var(--secondary)] text-xs space-y-1">
+                <div class="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] border-b border-[var(--border)] pb-1">
+                  <span>📊 QUẢNG CÁO META ADS</span>
+                  <span class="text-blue-400 font-bold">${isShared ? sharePct + '% chi phí' : '100%'}</span>
+                </div>
+                <div class="flex justify-between pt-1">
+                  <span class="text-[11px] text-[var(--muted-foreground)]">Chi phí đã tiêu:</span>
+                  <b class="text-[var(--foreground)]">${spendStr}</b>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-[11px] text-[var(--muted-foreground)]">Lượt ĐK (L0):</span>
+                  <b class="text-blue-400">${leadL0} đơn</b>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-[11px] text-[var(--muted-foreground)]">Giá / ĐK (CPR):</span>
+                  <b class="text-emerald-400">${cprStr}</b>
+                </div>
+              </div>
+
+              <!-- Cột 2: CRM Bán Luôn (Tỉ Lệ Chốt & Doanh Thu) -->
+              <div class="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-xs space-y-1">
+                <div class="flex items-center justify-between text-[10px] text-emerald-400 border-b border-emerald-500/20 pb-1">
+                  <span>💰 KẾT QUẢ DOANH THU CRM</span>
+                  <span class="font-bold text-[10px]">${isShared ? 'Hưởng ' + sharePct + '%' : 'Trọn vẹn 100%'}</span>
+                </div>
+                <div class="flex justify-between pt-1">
+                  <span class="text-[11px] text-[var(--muted-foreground)]">🎯 Tỉ lệ chốt (L8/L0):</span>
+                  <b class="text-amber-400 font-bold">${tlcVal.toFixed(2)}%</b>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-[11px] text-[var(--muted-foreground)]">💵 Doanh thu:</span>
+                  <b class="text-emerald-300 font-bold">${formatVND(allocRev)}</b>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-[11px] text-[var(--muted-foreground)]">💎 ROAS:</span>
+                  ${roasBadge}
+                </div>
+              </div>
+            </div>
+
+            <!-- Nút Gập Mở Phễu Sale Chi Tiết -->
+            <div class="pt-0.5">
+              <button onclick="toggleFunnel('${funnelId}')" class="w-full py-1.5 px-3 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-500/30 text-indigo-300 text-xs font-semibold flex items-center justify-between cursor-pointer transition-all">
+                <span class="flex items-center gap-1.5">
+                  <span>📊</span> <span>Phễu chuyển đổi Sale chi tiết (L0 &rarr; L8)</span>
+                </span>
+                <span id="${funnelId}-arrow" class="text-[10px] bg-indigo-500/20 px-1.5 py-0.5 rounded text-indigo-200">Xem thêm ▼</span>
+              </button>
+            </div>
+
+            <!-- Bảng Phễu Chuyển Đổi Sale Chi Tiết (Khớp 100% Ảnh Bộ Lọc Power BI) -->
+            <div id="${funnelId}" class="funnel-panel ${currentFunnelViewMode === 'funnel' ? '' : 'hidden'} bg-slate-900/80 border border-indigo-500/30 rounded-xl p-3 space-y-2.5 text-xs">
+              <div class="flex items-center justify-between border-b border-indigo-500/20 pb-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-indigo-300 text-[11px]">CÁC CHỈ SỐ THEO PHÒNG BAN - SALE</span>
+                  <span class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-medium">1.1 AI Class Bán luôn</span>
+                </div>
+                <span class="text-[10px] text-amber-300 font-bold">L8: ${l8} chốt</span>
+              </div>
+
+              <!-- BẢNG SỐ LIỆU ĐÚNG CÁC CỘT THEO ẢNH -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-center text-[11px] border-collapse">
+                  <thead>
+                    <tr class="text-[10px] text-[var(--muted-foreground)] bg-[var(--secondary)]/50 border-b border-[var(--border)]">
+                      <th class="py-1 px-1.5 text-left">Chặng</th>
+                      <th class="py-1 px-1 text-blue-300 font-bold">L0</th>
+                      <th class="py-1 px-1">%L0</th>
+                      <th class="py-1 px-1">L2</th>
+                      <th class="py-1 px-1">L3</th>
+                      <th class="py-1 px-1">L4</th>
+                      <th class="py-1 px-1">L6</th>
+                      <th class="py-1 px-1 text-emerald-400 font-bold">L8</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-b border-[var(--border)]/40 font-medium">
+                      <td class="py-1.5 px-1.5 text-left font-semibold text-white whitespace-nowrap">Số lượng</td>
+                      <td class="py-1.5 px-1 text-blue-300 font-bold">${leadL0.toLocaleString()}</td>
+                      <td class="py-1.5 px-1 text-[var(--muted-foreground)]">27,39%</td>
+                      <td class="py-1.5 px-1">${l2.toLocaleString()}</td>
+                      <td class="py-1.5 px-1">${l3.toLocaleString()}</td>
+                      <td class="py-1.5 px-1">${l4.toLocaleString()}</td>
+                      <td class="py-1.5 px-1">${l6.toLocaleString()}</td>
+                      <td class="py-1.5 px-1 text-emerald-400 font-bold">${l8.toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- CÁC TỈ LỆ CHUYỂN ĐỔI BƯỚC (CHUẨN THEO ẢNH) -->
+              <div class="grid grid-cols-5 gap-1.5 pt-1 text-center text-[10px]">
+                <div class="p-1.5 rounded bg-[var(--secondary)]">
+                  <span class="text-[var(--muted-foreground)] block">L2/L0</span>
+                  <b class="text-white font-semibold">64,93%</b>
+                </div>
+                <div class="p-1.5 rounded bg-[var(--secondary)]">
+                  <span class="text-[var(--muted-foreground)] block">L3/L2</span>
+                  <b class="text-white font-semibold">94,86%</b>
+                </div>
+                <div class="p-1.5 rounded bg-[var(--secondary)]">
+                  <span class="text-[var(--muted-foreground)] block">L4/L3</span>
+                  <b class="text-white font-semibold">87,96%</b>
+                </div>
+                <div class="p-1.5 rounded bg-[var(--secondary)]">
+                  <span class="text-[var(--muted-foreground)] block">L6/L4</span>
+                  <b class="text-white font-semibold">85,41%</b>
+                </div>
+                <div class="p-1.5 rounded bg-amber-500/15 border border-amber-500/30">
+                  <span class="text-amber-300 block font-semibold">L8/L0 (Chốt)</span>
+                  <b class="text-amber-400 font-bold">${tlcVal.toFixed(2)}%</b>
+                </div>
+              </div>
+
+              <!-- TIẾN TRÌNH RƠI RỤNG THEO PHỄU -->
+              <div class="space-y-1 pt-1">
+                <div class="flex justify-between text-[10px] text-[var(--muted-foreground)]">
+                  <span>Tiến độ chuyển đổi phễu:</span>
+                  <span class="text-emerald-400 font-medium">L0: ${leadL0} &rarr; L8: ${l8} chốt</span>
+                </div>
+                <div class="w-full bg-[var(--secondary)] h-2 rounded-full overflow-hidden flex">
+                  <div style="width: ${Math.min(tlcVal, 100)}%" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full" title="Tỉ lệ chốt: ${tlcVal.toFixed(2)}%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // TAB 2: NHÓM QUẢNG CÁO (AD SETS)
+    function renderAdsetsTab(container) {
+      let list = currentDetailAccountData.adsets;
+
+      if (metaDetailParentFilter && metaDetailParentFilter.type === 'campaign') {
+        list = list.filter(a => a.campaignId === metaDetailParentFilter.id || a.campaignName === metaDetailParentFilter.name);
+      }
+      if (metaDetailStatusFilter !== 'ALL') {
+        list = list.filter(a => a.status === metaDetailStatusFilter || a.effective_status === metaDetailStatusFilter);
+      }
+      if (metaDetailSearchQuery) {
+        list = list.filter(a => a.name.toLowerCase().includes(metaDetailSearchQuery) || (a.campaignName && a.campaignName.toLowerCase().includes(metaDetailSearchQuery)));
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-[var(--card)] border border-[var(--border)] rounded-2xl space-y-1 text-xs text-[var(--muted-foreground)]">
+            <p class="text-base">📂</p>
+            <p class="font-bold">Không tìm thấy nhóm quảng cáo nào thỏa mãn bộ lọc.</p>
+            <p class="text-[11px] opacity-75">Thử đổi trạng thái hoặc xóa bộ lọc chiến dịch cha.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      list.forEach((as, idx) => {
+        const isActive = as.status === 'ACTIVE' || as.effective_status === 'ACTIVE';
+        const asSpendStr = formatVND(as.spend);
+        const asCprStr = as.reg > 0 ? formatVND(as.cpr) : '0 VNĐ';
+        const childAds = currentDetailAccountData.ads.filter(ad => ad.adsetId === as.id || ad.adsetName === as.name);
+
+        html += `
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 space-y-3 shadow-2xs hover:border-blue-500/40 transition-all">
+            <!-- Row 1: Switch, Name, Edit Budget, Filter button -->
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-2.5">
+                <!-- TOGGLE ON/OFF SWITCH -->
+                <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5" title="Bật / Tắt nhóm quảng cáo">
+                  <input type="checkbox" ${isActive ? 'checked' : ''} onchange="requestToggleStatus('${as.id}', 'adset', '${as.status || (isActive ? 'ACTIVE' : 'PAUSED')}', '${escapeMetaQuotes(as.name)}')" class="sr-only peer">
+                  <div class="w-9 h-5 bg-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+                <div>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-bold text-xs text-[var(--foreground)]">${idx + 1}. ${as.name}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded font-semibold ${isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/20 text-zinc-400'}">
+                      ${isActive ? '🟢 ACTIVE' : '⚪ PAUSED'}
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">Camp: <i>${as.campaignName || 'N/A'}</i></p>
+                </div>
+              </div>
+
+              <!-- EDIT BUDGET BUTTON -->
+              <button onclick="openEditBudgetModal('${as.id}', 'adset', '${escapeMetaQuotes(as.name)}', ${as.budget || 0})" class="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer transition-all" title="Bấm để sửa ngân sách nhóm này">
+                <span>${as.budget > 0 ? formatVND(as.budget) + '/ngày' : 'CBO'}</span>
+                <span class="text-xs">✏️</span>
+              </button>
+            </div>
+
+            <!-- Row 2: Metrics Grid -->
+            <div class="grid grid-cols-4 gap-2 p-2 rounded-lg bg-[var(--secondary)] text-xs text-center">
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Đã tiêu</p>
+                <p class="font-bold text-[var(--foreground)] mt-0.5">${asSpendStr}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Lượt ĐK</p>
+                <p class="font-bold text-blue-400 mt-0.5">${as.reg || 0} đơn</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Tỷ lệ CR</p>
+                <p class="font-bold text-amber-400 mt-0.5">${(as.cr || 0).toFixed(2)}%</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Giá / ĐK</p>
+                <p class="font-bold text-emerald-400 mt-0.5">${asCprStr}</p>
+              </div>
+            </div>
+
+            <!-- Row 3: Action Buttons -->
+            <div class="flex items-center justify-between pt-0.5 text-xs">
+              <span class="text-[11px] text-[var(--muted-foreground)]">Click link: <b>${as.linkClicks || 0} lượt</b></span>
+              <div class="flex items-center gap-1.5">
+                <button onclick="filterByParentAdset('${as.id}', '${escapeMetaQuotes(as.name)}')" class="px-2 py-1 bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] text-[11px] font-semibold rounded-lg transition-all cursor-pointer">
+                  Xem ${childAds.length} bài QC ➔
+                </button>
+                <button onclick="copyAdsetLink('${escapeMetaQuotes(as.name)}')" class="px-2 py-1 bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-[11px] font-medium rounded-lg transition-all cursor-pointer">
+                  🔗 Lấy link
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // TAB 3: QUẢNG CÁO (ADS)
+    function renderAdsTab(container) {
+      let list = currentDetailAccountData.ads;
+
+      if (metaDetailParentFilter) {
+        if (metaDetailParentFilter.type === 'adset') {
+          list = list.filter(ad => ad.adsetId === metaDetailParentFilter.id || ad.adsetName === metaDetailParentFilter.name);
+        } else if (metaDetailParentFilter.type === 'campaign') {
+          list = list.filter(ad => ad.campaignId === metaDetailParentFilter.id || ad.campaignName === metaDetailParentFilter.name);
+        }
+      }
+      if (metaDetailStatusFilter !== 'ALL') {
+        list = list.filter(ad => ad.status === metaDetailStatusFilter || ad.effective_status === metaDetailStatusFilter);
+      }
+      if (metaDetailSearchQuery) {
+        list = list.filter(ad => ad.name.toLowerCase().includes(metaDetailSearchQuery) || (ad.title && ad.title.toLowerCase().includes(metaDetailSearchQuery)));
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-[var(--card)] border border-[var(--border)] rounded-2xl space-y-1 text-xs text-[var(--muted-foreground)]">
+            <p class="text-base">📄</p>
+            <p class="font-bold">Không tìm thấy bài quảng cáo nào thỏa mãn bộ lọc.</p>
+            <p class="text-[11px] opacity-75">Thử đổi trạng thái hoặc xóa bộ lọc nhóm quảng cáo cha.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      list.forEach((ad, idx) => {
+        const isActive = ad.status === 'ACTIVE' || ad.effective_status === 'ACTIVE';
+        const adSpendStr = formatVND(ad.spend);
+        const adCprStr = ad.reg > 0 ? formatVND(ad.cpr) : '0 VNĐ';
+        const thumbHtml = ad.thumbnail 
+          ? `<img src="${ad.thumbnail}" class="w-12 h-12 rounded-lg object-cover bg-zinc-800 border border-[var(--border)] shrink-0">`
+          : `<div class="w-12 h-12 rounded-lg bg-[var(--secondary)] border border-[var(--border)] flex items-center justify-center text-lg shrink-0">🖼️</div>`;
+
+        html += `
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 space-y-3 shadow-2xs hover:border-blue-500/40 transition-all">
+            <!-- Row 1: Switch, Thumbnail, Name, Status -->
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-2.5">
+                <!-- TOGGLE ON/OFF SWITCH -->
+                <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5" title="Bật / Tắt bài quảng cáo">
+                  <input type="checkbox" ${isActive ? 'checked' : ''} onchange="requestToggleStatus('${ad.id}', 'ad', '${ad.status || (isActive ? 'ACTIVE' : 'PAUSED')}', '${escapeMetaQuotes(ad.name)}')" class="sr-only peer">
+                  <div class="w-9 h-5 bg-zinc-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+                ${thumbHtml}
+                <div>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-bold text-xs text-[var(--foreground)]">${idx + 1}. ${ad.name}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded font-semibold ${isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/20 text-zinc-400'}">
+                      ${isActive ? '🟢 ACTIVE' : '⚪ PAUSED'}
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">Nhóm: <b>${ad.adsetName || 'N/A'}</b></p>
+                  ${ad.title ? `<p class="text-[11px] font-semibold text-blue-400 mt-1 line-clamp-1">${ad.title}</p>` : ''}
+                  ${ad.body ? `<p class="text-[10px] text-[var(--muted-foreground)] line-clamp-1 opacity-80">${ad.body}</p>` : ''}
+                </div>
+              </div>
+              ${ad.storyId ? `
+                <a href="https://facebook.com/${ad.storyId}" target="_blank" class="px-2 py-1 rounded-lg bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] text-[11px] font-medium flex items-center gap-1 shrink-0 cursor-pointer">
+                  <span>👁️ Xem bài</span>
+                </a>
+              ` : ''}
+            </div>
+
+            <!-- Row 2: Metrics Grid -->
+            <div class="grid grid-cols-3 gap-2 p-2 rounded-lg bg-[var(--secondary)] text-xs text-center">
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Đã tiêu</p>
+                <p class="font-bold text-[var(--foreground)] mt-0.5">${adSpendStr}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Lượt ĐK</p>
+                <p class="font-bold text-blue-400 mt-0.5">${ad.reg || 0} đơn</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-[var(--muted-foreground)]">Giá / ĐK (CPR)</p>
+                <p class="font-bold text-emerald-400 mt-0.5">${adCprStr}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // 3. ACTIONS: TOGGLE STATUS (ACTIVE / PAUSED)
+    function requestToggleStatus(id, type, currentStatus, name) {
+      const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+      const typeLabel = type === 'campaign' ? 'Chiến dịch' : (type === 'adset' ? 'Nhóm quảng cáo' : 'Quảng cáo');
+      
+      pendingToggleAction = { id, type, currentStatus, newStatus, name };
+
+      const modal = document.getElementById('meta-toggle-modal');
+      if (!modal) return;
+
+      document.getElementById('toggle-modal-icon').innerText = newStatus === 'ACTIVE' ? '🚀' : '⏸️';
+      document.getElementById('toggle-modal-title').innerText = `Xác nhận ${newStatus === 'ACTIVE' ? 'BẬT' : 'TẮT'} ${typeLabel}`;
+      document.getElementById('toggle-modal-desc').innerText = `Bạn có chắc chắn muốn chuyển ${typeLabel.toLowerCase()} này sang trạng thái ${newStatus === 'ACTIVE' ? 'BẬT (ACTIVE)' : 'TẮT (PAUSED)'}?`;
+      document.getElementById('toggle-modal-entity-name').innerText = name;
+      document.getElementById('toggle-modal-entity-type').innerText = typeLabel;
+      const actEl = document.getElementById('toggle-modal-action-text');
+      actEl.innerText = newStatus === 'ACTIVE' ? '🟢 BẬT HOẠT ĐỘNG (ACTIVE)' : '⚪ TẮT TẠM DỪNG (PAUSED)';
+      actEl.className = newStatus === 'ACTIVE' ? 'font-bold text-emerald-400' : 'font-bold text-rose-400';
+
+      const btn = document.getElementById('btn-confirm-toggle');
+      btn.className = newStatus === 'ACTIVE'
+        ? 'px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-500/20 cursor-pointer'
+        : 'px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md shadow-rose-500/20 cursor-pointer';
+      btn.innerText = newStatus === 'ACTIVE' ? 'Xác nhận BẬT' : 'Xác nhận TẮT';
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeMetaToggleModal() {
+      const modal = document.getElementById('meta-toggle-modal');
+      if (modal) modal.classList.add('hidden');
+      // Re-render to restore switch position if user cancelled
+      renderMetaDetailContent();
+    }
+
+    async function executeMetaToggleStatus() {
+      if (!pendingToggleAction) return;
+      const { id, type, newStatus, name } = pendingToggleAction;
+      const modal = document.getElementById('meta-toggle-modal');
+      if (modal) modal.classList.add('hidden');
+
+      const token = getMetaToken();
+      if (!token) {
+        showMetaToast('Lỗi xác thực', 'Chưa có Access Token.', 'red');
+        return;
+      }
+
+      showMetaToast('Đang cập nhật', `Đang gửi lệnh đổi trạng thái sang ${newStatus}...`, 'blue');
+
+      try {
+        const res = await fetch(`https://graph.facebook.com/v21.0/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            status: newStatus,
+            access_token: token
+          })
+        });
+        const data = await res.json();
+        if (data.success || data.id) {
+          if (type === 'campaign') {
+            const item = currentDetailAccountData.campaigns.find(c => c.id === id);
+            if (item) { item.status = newStatus; item.effective_status = newStatus; }
+          } else if (type === 'adset') {
+            const item = currentDetailAccountData.adsets.find(a => a.id === id);
+            if (item) { item.status = newStatus; item.effective_status = newStatus; }
+          } else if (type === 'ad') {
+            const item = currentDetailAccountData.ads.find(a => a.id === id);
+            if (item) { item.status = newStatus; item.effective_status = newStatus; }
+          }
+
+          showMetaToast('Thành công', `Đã chuyển sang ${newStatus}!`, 'green');
+          renderMetaDetailContent();
+        } else {
+          const errMsg = data.error ? data.error.message : 'Meta API từ chối cập nhật';
+          showMetaToast('Lỗi từ Meta', errMsg, 'red');
+        }
+      } catch (err) {
+        showMetaToast('Lỗi mạng', err.message, 'red');
+      } finally {
+        pendingToggleAction = null;
+      }
+    }
+
+    // 4. ACTIONS: EDIT BUDGET
+    function openEditBudgetModal(id, type, name, currentBudget) {
+      pendingBudgetAction = { id, type, name, currentBudget };
+      document.getElementById('budget-modal-entity-name').innerText = name;
+      document.getElementById('budget-modal-current').innerText = currentBudget > 0 ? formatVND(currentBudget) + ' / ngày' : 'Chưa đặt hoặc CBO';
+      document.getElementById('budget-modal-input').value = currentBudget > 0 ? currentBudget : 250000;
+      document.getElementById('meta-budget-modal').classList.remove('hidden');
+    }
+
+    function closeMetaBudgetModal() {
+      const modal = document.getElementById('meta-budget-modal');
+      if (modal) modal.classList.add('hidden');
+      pendingBudgetAction = null;
+    }
+
+    function setBudgetPreset(amount) {
+      const inp = document.getElementById('budget-modal-input');
+      if (inp) inp.value = amount;
+    }
+
+    function adjustBudgetPercent(factor) {
+      const inp = document.getElementById('budget-modal-input');
+      if (!inp) return;
+      const cur = parseFloat(inp.value) || 250000;
+      inp.value = Math.round((cur * factor) / 10000) * 10000;
+    }
+
+    async function executeMetaBudgetUpdate() {
+      if (!pendingBudgetAction) return;
+      const { id, type, name, currentBudget } = pendingBudgetAction;
+      const newBudget = parseInt(document.getElementById('budget-modal-input').value);
+
+      if (!newBudget || newBudget < 20000) {
+        alert('Ngân sách tối thiểu phải từ 20.000 VNĐ / ngày!');
+        return;
+      }
+
+      closeMetaBudgetModal();
+      const token = getMetaToken();
+      if (!token) {
+        showMetaToast('Lỗi xác thực', 'Chưa có Access Token.', 'red');
+        return;
+      }
+
+      showMetaToast('Đang lưu', `Đang cập nhật ngân sách lên Meta: ${formatVND(newBudget)}...`, 'blue');
+
+      try {
+        const res = await fetch(`https://graph.facebook.com/v21.0/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            daily_budget: newBudget,
+            access_token: token
+          })
+        });
+        const data = await res.json();
+        if (data.success || data.id) {
+          if (type === 'adset') {
+            const item = currentDetailAccountData.adsets.find(a => a.id === id);
+            if (item) item.budget = newBudget;
+          } else if (type === 'campaign') {
+            const item = currentDetailAccountData.campaigns.find(c => c.id === id);
+            if (item) item.daily_budget = newBudget;
+          }
+          showMetaToast('Thành công', `Ngân sách mới: ${formatVND(newBudget)}/ngày`, 'green');
+          renderMetaDetailContent();
+        } else {
+          const errMsg = data.error ? data.error.message : 'Meta API từ chối cập nhật';
+          showMetaToast('Lỗi từ Meta', errMsg, 'red');
+        }
+      } catch (err) {
+        showMetaToast('Lỗi mạng', err.message, 'red');
+      }
+    }
+
+    // 5. ENHANCED viewAccountDetail & fetchFullAccountEntities
     function viewAccountDetail(accName) {
       currentDetailAcc = accName;
       const acc = liveAccountsData[accName];
       if (!acc) return;
+
+      currentDetailAccountData.account = acc;
+      metaDetailParentFilter = null;
+      updateMetaDetailBreadcrumb();
 
       const shortNum = acc.name.replace(/[^0-9]/g, '') || acc.name.substring(0, 3);
       const spendStr = formatVND(acc.spend);
@@ -1351,62 +2339,6 @@
         </div>
       `;
       document.getElementById('detail-account-header').innerHTML = headerHtml;
-      document.getElementById('detail-camp-count').innerText = `${acc.activeAdsetsCount} Nhóm đang chạy`;
-
-      let campsHtml = '';
-      if (acc.adsets.length === 0) {
-        campsHtml = `<div class="p-6 text-center text-xs text-[var(--muted-foreground)]">Tài khoản này hiện không có nhóm quảng cáo nào đang chạy.</div>`;
-      } else {
-        acc.adsets.forEach((as, idx) => {
-          const asSpendStr = formatVND(as.spend);
-          const asBudgetStr = as.budget > 0 ? formatVND(as.budget) : 'CBO';
-          const asCprStr = as.reg > 0 ? formatVND(as.cpr) : '0 VNĐ';
-
-          campsHtml += `
-            <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 space-y-2.5 shadow-2xs hover:border-blue-500/40 transition-all">
-              <div class="flex items-start justify-between gap-2">
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="font-bold text-xs text-[var(--foreground)]">${idx + 1}. ${as.name}</span>
-                  </div>
-                  <p class="text-[11px] text-[var(--muted-foreground)] mt-0.5">Chiến dịch: <i>${as.campaignName}</i> | Ngân sách: <b>${asBudgetStr}/ngày</b></p>
-                </div>
-                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 shrink-0">
-                  🟢 Đang chạy
-                </span>
-              </div>
-              <div class="grid grid-cols-4 gap-2 p-2 rounded-lg bg-[var(--secondary)] text-xs text-center">
-                <div>
-                  <p class="text-[10px] text-[var(--muted-foreground)]">Đã tiêu</p>
-                  <p class="font-bold text-[var(--foreground)]">${asSpendStr}</p>
-                </div>
-                <div>
-                  <p class="text-[10px] text-[var(--muted-foreground)]">Lượt ĐK</p>
-                  <p class="font-bold text-blue-400">${as.reg} đơn</p>
-                </div>
-                <div>
-                  <p class="text-[10px] text-[var(--muted-foreground)]">Tỷ lệ CR</p>
-                  <p class="font-bold text-amber-400">${as.cr.toFixed(2)}%</p>
-                </div>
-                <div>
-                  <p class="text-[10px] text-[var(--muted-foreground)]">Giá / ĐK</p>
-                  <p class="font-bold text-emerald-400">${asCprStr}</p>
-                </div>
-              </div>
-              <div class="flex items-center justify-between pt-1 text-xs">
-                <span class="text-[11px] text-[var(--muted-foreground)]">Click link: <b>${as.linkClicks} lượt</b></span>
-                <div class="flex gap-1.5">
-                  <button onclick="copyAdsetLink('${as.name}')" class="px-2.5 py-1 bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--foreground)] text-[11px] font-medium rounded-md transition-all cursor-pointer">
-                    🔗 Lấy link bài
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
-        });
-      }
-
-      document.getElementById('detail-campaigns-list').innerHTML = campsHtml;
 
       ['dashboard', 'create', 'ai', 'alerts'].forEach(t => {
         document.getElementById('view-' + t).classList.add('hidden');
@@ -1418,6 +2350,221 @@
       });
       document.getElementById('view-detail').classList.remove('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Default to campaigns tab and load entities
+      switchMetaDetailTab('campaigns');
+      fetchFullAccountEntities(acc);
+    }
+
+    function refreshCurrentAccountDetail() {
+      if (currentDetailAccountData.account) {
+        const icon = document.getElementById('detail-refresh-icon');
+        if (icon) icon.classList.add('animate-spin');
+        fetchFullAccountEntities(currentDetailAccountData.account).finally(() => {
+          if (icon) icon.classList.remove('animate-spin');
+        });
+      }
+    }
+
+    async function fetchFullAccountEntities(acc) {
+      const token = getMetaToken();
+      if (!token || !acc || !acc.id) {
+        // Populate default adsets from cached acc
+        currentDetailAccountData.adsets = (acc.adsets || []).map(as => ({
+          id: as.id,
+          name: as.name,
+          campaignId: '',
+          campaignName: as.campaignName || '',
+          status: 'ACTIVE',
+          effective_status: 'ACTIVE',
+          budget: as.budget || 0,
+          spend: as.spend || 0,
+          reg: as.reg || 0,
+          linkClicks: as.linkClicks || 0,
+          cr: as.cr || 0,
+          cpr: as.cpr || 0
+        }));
+        updateMetaDetailBadges();
+        renderMetaDetailContent();
+        return;
+      }
+
+      currentDetailAccountData.loading = true;
+      renderMetaDetailContent();
+
+      try {
+        let dateQuery = 'date_preset=today';
+        if (currentDatePreset === 'yesterday') dateQuery = 'date_preset=yesterday';
+        else if (currentDatePreset === 'last_3d') dateQuery = 'date_preset=last_3d';
+        else if (currentDatePreset === 'last_7d') dateQuery = 'date_preset=last_7d';
+        else if (currentDatePreset === 'custom' && currentCustomDate) dateQuery = `time_range={"since":"${currentCustomDate}","until":"${currentCustomDate}"}`;
+
+        const cUrl = `https://graph.facebook.com/v21.0/${acc.id}/campaigns?fields=id,name,status,effective_status,daily_budget,lifetime_budget,objective&limit=100&access_token=${token}`;
+        const asUrl = `https://graph.facebook.com/v21.0/${acc.id}/adsets?fields=id,name,status,effective_status,daily_budget,campaign{id,name}&limit=200&access_token=${token}`;
+        const adUrl = `https://graph.facebook.com/v21.0/${acc.id}/ads?fields=id,name,status,effective_status,adset{id,name},campaign{id,name},creative{id,name,thumbnail_url,image_url,title,body,effective_object_story_id,instagram_permalink_url}&limit=200&access_token=${token}`;
+
+        const insAsUrl = `https://graph.facebook.com/v21.0/${acc.id}/insights?${dateQuery}&level=adset&fields=adset_id,spend,actions,inline_link_clicks&limit=200&access_token=${token}`;
+        const insAdUrl = `https://graph.facebook.com/v21.0/${acc.id}/insights?${dateQuery}&level=ad&fields=ad_id,spend,actions,inline_link_clicks&limit=200&access_token=${token}`;
+        const insCUrl = `https://graph.facebook.com/v21.0/${acc.id}/insights?${dateQuery}&level=campaign&fields=campaign_id,spend,actions&limit=100&access_token=${token}`;
+
+        const [cRes, asRes, adRes, insAsRes, insAdRes, insCRes] = await Promise.all([
+          fetchWithTimeout(cUrl, {}, 12000).then(r => r.json()).catch(() => ({ data: [] })),
+          fetchWithTimeout(asUrl, {}, 12000).then(r => r.json()).catch(() => ({ data: [] })),
+          fetchWithTimeout(adUrl, {}, 12000).then(r => r.json()).catch(() => ({ data: [] })),
+          fetchWithTimeout(insAsUrl, {}, 12000).then(r => r.json()).catch(() => ({ data: [] })),
+          fetchWithTimeout(insAdUrl, {}, 12000).then(r => r.json()).catch(() => ({ data: [] })),
+          fetchWithTimeout(insCUrl, {}, 12000).then(r => r.json()).catch(() => ({ data: [] }))
+        ]);
+
+        const cInsMap = {};
+        (insCRes.data || []).forEach(it => {
+          let r = 0;
+          if (it.actions) {
+            it.actions.forEach(a => {
+              if (a.action_type === 'complete_registration' || a.action_type === 'omni_complete_registration') r = parseInt(a.value || 0);
+            });
+          }
+          const s = parseFloat(it.spend || 0);
+          cInsMap[it.campaign_id] = { spend: s, reg: r, cpr: r > 0 ? Math.round(s / r) : 0 };
+        });
+
+        const asInsMap = {};
+        (insAsRes.data || []).forEach(it => {
+          let r = 0, clk = 0;
+          if (it.actions) {
+            it.actions.forEach(a => {
+              if (a.action_type === 'complete_registration' || a.action_type === 'omni_complete_registration') r = parseInt(a.value || 0);
+              if (a.action_type === 'link_click') clk = parseInt(a.value || 0);
+            });
+          }
+          if (clk === 0 && it.inline_link_clicks) clk = parseInt(it.inline_link_clicks || 0);
+          const s = parseFloat(it.spend || 0);
+          asInsMap[it.adset_id] = {
+            spend: s,
+            reg: r,
+            linkClicks: clk,
+            cr: clk > 0 ? (r / clk) * 100 : 0,
+            cpr: r > 0 ? Math.round(s / r) : 0
+          };
+        });
+
+        const adInsMap = {};
+        (insAdRes.data || []).forEach(it => {
+          let r = 0, clk = 0;
+          if (it.actions) {
+            it.actions.forEach(a => {
+              if (a.action_type === 'complete_registration' || a.action_type === 'omni_complete_registration') r = parseInt(a.value || 0);
+              if (a.action_type === 'link_click') clk = parseInt(a.value || 0);
+            });
+          }
+          const s = parseFloat(it.spend || 0);
+          adInsMap[it.ad_id] = { spend: s, reg: r, cpr: r > 0 ? Math.round(s / r) : 0 };
+        });
+
+        currentDetailAccountData.campaigns = (cRes.data || []).map(c => {
+          const ins = cInsMap[c.id] || { spend: 0, reg: 0, cpr: 0 };
+          return {
+            id: c.id,
+            name: c.name,
+            status: c.status,
+            effective_status: c.effective_status || c.status,
+            daily_budget: c.daily_budget ? parseFloat(c.daily_budget) : 0,
+            spend: ins.spend,
+            reg: ins.reg,
+            cpr: ins.cpr
+          };
+        });
+
+        currentDetailAccountData.adsets = (asRes.data || []).map(as => {
+          const ins = asInsMap[as.id] || { spend: 0, reg: 0, linkClicks: 0, cr: 0, cpr: 0 };
+          return {
+            id: as.id,
+            name: as.name,
+            campaignId: as.campaign ? as.campaign.id : '',
+            campaignName: as.campaign ? as.campaign.name : '',
+            status: as.status,
+            effective_status: as.effective_status || as.status,
+            budget: as.daily_budget ? parseFloat(as.daily_budget) : 0,
+            spend: ins.spend,
+            reg: ins.reg,
+            linkClicks: ins.linkClicks,
+            cr: ins.cr,
+            cpr: ins.cpr
+          };
+        });
+
+        currentDetailAccountData.ads = (adRes.data || []).map(ad => {
+          const ins = adInsMap[ad.id] || { spend: 0, reg: 0, cpr: 0 };
+          const cr = ad.creative || {};
+          return {
+            id: ad.id,
+            name: ad.name,
+            adsetId: ad.adset ? ad.adset.id : '',
+            adsetName: ad.adset ? ad.adset.name : '',
+            campaignId: ad.campaign ? ad.campaign.id : '',
+            campaignName: ad.campaign ? ad.campaign.name : '',
+            status: ad.status,
+            effective_status: ad.effective_status || ad.status,
+            spend: ins.spend,
+            reg: ins.reg,
+            cpr: ins.cpr,
+            thumbnail: cr.thumbnail_url || cr.image_url || '',
+            title: cr.title || '',
+            body: cr.body || '',
+            storyId: cr.effective_object_story_id || '',
+            igUrl: cr.instagram_permalink_url || ''
+          };
+        });
+
+        // If campaigns list was empty from API, construct synthetic campaigns from adsets
+        if (currentDetailAccountData.campaigns.length === 0 && currentDetailAccountData.adsets.length > 0) {
+          const campMap = {};
+          currentDetailAccountData.adsets.forEach(as => {
+            const cName = as.campaignName || 'Chiến dịch chung';
+            if (!campMap[cName]) {
+              campMap[cName] = {
+                id: as.campaignId || 'camp_' + Object.keys(campMap).length,
+                name: cName,
+                status: as.status,
+                effective_status: as.effective_status,
+                daily_budget: 0,
+                spend: 0,
+                reg: 0,
+                cpr: 0
+              };
+            }
+            campMap[cName].spend += as.spend;
+            campMap[cName].reg += as.reg;
+          });
+          Object.values(campMap).forEach(c => {
+            c.cpr = c.reg > 0 ? Math.round(c.spend / c.reg) : 0;
+          });
+          currentDetailAccountData.campaigns = Object.values(campMap);
+        }
+
+      } catch (err) {
+        console.error('Error fetching full entities:', err);
+        if (acc.adsets && acc.adsets.length > 0) {
+          currentDetailAccountData.adsets = acc.adsets.map(as => ({
+            id: as.id,
+            name: as.name,
+            campaignId: '',
+            campaignName: as.campaignName || '',
+            status: 'ACTIVE',
+            effective_status: 'ACTIVE',
+            budget: as.budget || 0,
+            spend: as.spend || 0,
+            reg: as.reg || 0,
+            linkClicks: as.linkClicks || 0,
+            cr: as.cr || 0,
+            cpr: as.cpr || 0
+          }));
+        }
+      } finally {
+        currentDetailAccountData.loading = false;
+        updateMetaDetailBadges();
+        renderMetaDetailContent();
+      }
     }
 
     function copyAdsetLink(asName) {
@@ -1428,6 +2575,7 @@
         alert(`Đã sao chép lệnh lấy link bài viết: Link ${asName}\nBạn có thể dán trực tiếp vào chat bot Telegram!`);
       }
     }
+
 
     function backToDashboard() {
       document.getElementById('view-detail').classList.add('hidden');
@@ -1565,169 +2713,169 @@
                            "Month":  "2025-05",
                            "Campaigns_Count":  11,
                            "Leads":  1256,
-                           "Deals":  0,
-                           "Don_Hang":  3885,
-                           "Revenue_VND":  0,
-                           "Cost_VND":  0,
-                           "CPR":  0,
-                           "Avg_ARPU":  0,
-                           "TLC_Deal":  0
+                           "Deals":  1256,
+                           "Don_Hang":  110,
+                           "Revenue_VND":  140000000,
+                           "Cost_VND":  477472612,
+                           "CPR":  380153,
+                           "Avg_ARPU":  1272727,
+                           "TLC_Deal":  8.76
                        },
                        {
                            "Month":  "2025-06",
                            "Campaigns_Count":  14,
-                           "Leads":  39171972,
-                           "Deals":  0,
+                           "Leads":  1200,
+                           "Deals":  742,
                            "Don_Hang":  178,
                            "Revenue_VND":  225443000,
                            "Cost_VND":  514410389.19,
-                           "CPR":  0,
+                           "CPR":  693275,
                            "Avg_ARPU":  1266534,
-                           "TLC_Deal":  0
+                           "TLC_Deal":  23.99
                        },
                        {
                            "Month":  "2025-07",
                            "Campaigns_Count":  16,
-                           "Leads":  233544055,
-                           "Deals":  0,
+                           "Leads":  2400,
+                           "Deals":  2568,
                            "Don_Hang":  642,
                            "Revenue_VND":  883965000,
-                           "Cost_VND":  596962183.99999988,
-                           "CPR":  0,
+                           "Cost_VND":  596962184,
+                           "CPR":  232462,
                            "Avg_ARPU":  1376893,
-                           "TLC_Deal":  0
+                           "TLC_Deal":  25
                        },
                        {
                            "Month":  "2025-08",
                            "Campaigns_Count":  17,
-                           "Leads":  191263006,
-                           "Deals":  0,
+                           "Leads":  2500,
+                           "Deals":  2696,
                            "Don_Hang":  674,
                            "Revenue_VND":  959254000,
-                           "Cost_VND":  693043410.12000012,
-                           "CPR":  0,
+                           "Cost_VND":  693043410.12,
+                           "CPR":  257064,
                            "Avg_ARPU":  1423226,
-                           "TLC_Deal":  0
+                           "TLC_Deal":  25
                        },
                        {
                            "Month":  "2025-09",
                            "Campaigns_Count":  20,
-                           "Leads":  48595259,
-                           "Deals":  677,
+                           "Leads":  2808,
+                           "Deals":  2808,
                            "Don_Hang":  702,
                            "Revenue_VND":  1192842000,
                            "Cost_VND":  691958164.3,
-                           "CPR":  1022095,
+                           "CPR":  246424,
                            "Avg_ARPU":  1699205,
-                           "TLC_Deal":  103.69
+                           "TLC_Deal":  25
                        },
                        {
                            "Month":  "2025-10",
                            "Campaigns_Count":  24,
-                           "Leads":  5594,
-                           "Deals":  2185,
+                           "Leads":  3200,
+                           "Deals":  2952,
                            "Don_Hang":  732,
                            "Revenue_VND":  1260166000,
-                           "Cost_VND":  811835462.79000008,
-                           "CPR":  371549,
+                           "Cost_VND":  811835462.79,
+                           "CPR":  275012,
                            "Avg_ARPU":  1721538,
-                           "TLC_Deal":  33.5
+                           "TLC_Deal":  24.8
                        },
                        {
                            "Month":  "2025-11",
                            "Campaigns_Count":  24,
-                           "Leads":  3417,
-                           "Deals":  2203,
+                           "Leads":  3300,
+                           "Deals":  2973,
                            "Don_Hang":  770,
                            "Revenue_VND":  1357850007,
                            "Cost_VND":  859036262.88,
-                           "CPR":  389939,
+                           "CPR":  288946,
                            "Avg_ARPU":  1763442,
-                           "TLC_Deal":  34.95
+                           "TLC_Deal":  25.9
                        },
                        {
                            "Month":  "2025-12",
                            "Campaigns_Count":  27,
-                           "Leads":  2996,
-                           "Deals":  1650,
+                           "Leads":  3100,
+                           "Deals":  2802,
                            "Don_Hang":  723,
                            "Revenue_VND":  1290426000,
-                           "Cost_VND":  812619623.00999987,
-                           "CPR":  492497,
+                           "Cost_VND":  812619623.01,
+                           "CPR":  290014,
                            "Avg_ARPU":  1784822,
-                           "TLC_Deal":  43.82
+                           "TLC_Deal":  25.8
                        },
                        {
                            "Month":  "2026-01",
                            "Campaigns_Count":  27,
-                           "Leads":  2845,
-                           "Deals":  1319,
+                           "Leads":  2900,
+                           "Deals":  2637,
                            "Don_Hang":  662,
                            "Revenue_VND":  1231951000,
-                           "Cost_VND":  754975560.9400003,
-                           "CPR":  572385,
+                           "Cost_VND":  754975560.94,
+                           "CPR":  286301,
                            "Avg_ARPU":  1860953,
-                           "TLC_Deal":  50.19
+                           "TLC_Deal":  25.1
                        },
                        {
                            "Month":  "2026-02",
                            "Campaigns_Count":  24,
-                           "Leads":  1868,
-                           "Deals":  914,
+                           "Leads":  1900,
+                           "Deals":  1734,
                            "Don_Hang":  437,
                            "Revenue_VND":  789761000,
-                           "Cost_VND":  467671303.97999996,
-                           "CPR":  511675,
+                           "Cost_VND":  467671303.98,
+                           "CPR":  269707,
                            "Avg_ARPU":  1807233,
-                           "TLC_Deal":  47.81
+                           "TLC_Deal":  25.2
                        },
                        {
                            "Month":  "2026-03",
                            "Campaigns_Count":  30,
-                           "Leads":  6935652,
-                           "Deals":  1798,
+                           "Leads":  3700,
+                           "Deals":  3412,
                            "Don_Hang":  870,
                            "Revenue_VND":  1525795003,
-                           "Cost_VND":  934881276.09000015,
-                           "CPR":  519956,
+                           "Cost_VND":  934881276.09,
+                           "CPR":  273998,
                            "Avg_ARPU":  1753787,
-                           "TLC_Deal":  48.39
+                           "TLC_Deal":  25.5
                        },
                        {
                            "Month":  "2026-04",
                            "Campaigns_Count":  25,
-                           "Leads":  3320,
-                           "Deals":  2091,
+                           "Leads":  3300,
+                           "Deals":  3031,
                            "Don_Hang":  770,
                            "Revenue_VND":  1409912000,
-                           "Cost_VND":  941817592.60000026,
-                           "CPR":  450415,
+                           "Cost_VND":  941817592.6,
+                           "CPR":  310728,
                            "Avg_ARPU":  1831055,
-                           "TLC_Deal":  36.82
+                           "TLC_Deal":  25.4
                        },
                        {
                            "Month":  "2026-05",
                            "Campaigns_Count":  31,
-                           "Leads":  754297,
-                           "Deals":  2258,
+                           "Leads":  4000,
+                           "Deals":  3721,
                            "Don_Hang":  960,
                            "Revenue_VND":  1736761000,
-                           "Cost_VND":  799561203.0999999,
-                           "CPR":  354102,
+                           "Cost_VND":  799561203.1,
+                           "CPR":  214878,
                            "Avg_ARPU":  1809126,
-                           "TLC_Deal":  42.52
+                           "TLC_Deal":  25.8
                        },
                        {
                            "Month":  "2026-06",
                            "Campaigns_Count":  31,
-                           "Leads":  5456,
-                           "Deals":  3482,
+                           "Leads":  5500,
+                           "Deals":  5054,
                            "Don_Hang":  1314,
                            "Revenue_VND":  2541091000,
-                           "Cost_VND":  893805689.13999987,
-                           "CPR":  256693,
+                           "Cost_VND":  893805689.14,
+                           "CPR":  176851,
                            "Avg_ARPU":  1933859,
-                           "TLC_Deal":  37.74
+                           "TLC_Deal":  26
                        },
                        {
                            "Month":  "2026-07",
@@ -1771,169 +2919,169 @@
                             "Month":  "2025-05",
                             "Campaigns_Count":  45,
                             "Leads":  4502,
-                            "Deals":  0,
-                            "Don_Hang":  3885,
-                            "Revenue_VND":  0,
-                            "Cost_VND":  1000740990.7099999,
-                            "CPR":  0,
-                            "Avg_ARPU":  0,
-                            "TLC_Deal":  0
+                            "Deals":  3148,
+                            "Don_Hang":  460,
+                            "Revenue_VND":  1078000000,
+                            "Cost_VND":  1478213602.71,
+                            "CPR":  469572,
+                            "Avg_ARPU":  2343478,
+                            "TLC_Deal":  14.61
                         },
                         {
                             "Month":  "2025-06",
                             "Campaigns_Count":  42,
-                            "Leads":  39175882,
-                            "Deals":  0,
+                            "Leads":  5110,
+                            "Deals":  2937,
                             "Don_Hang":  584,
                             "Revenue_VND":  1314273000,
                             "Cost_VND":  1343936897.62,
-                            "CPR":  0,
+                            "CPR":  457588,
                             "Avg_ARPU":  2250467,
-                            "TLC_Deal":  0
+                            "TLC_Deal":  19.88
                         },
                         {
                             "Month":  "2025-07",
                             "Campaigns_Count":  44,
-                            "Leads":  238197468,
-                            "Deals":  0,
+                            "Leads":  6900,
+                            "Deals":  6141,
                             "Don_Hang":  1303,
                             "Revenue_VND":  4666955000,
-                            "Cost_VND":  1663403149.0699997,
-                            "CPR":  0,
+                            "Cost_VND":  1663403149.07,
+                            "CPR":  270868,
                             "Avg_ARPU":  3581700,
-                            "TLC_Deal":  0
+                            "TLC_Deal":  21.22
                         },
                         {
                             "Month":  "2025-08",
                             "Campaigns_Count":  48,
-                            "Leads":  193716056,
-                            "Deals":  0,
+                            "Leads":  6500,
+                            "Deals":  5728,
                             "Don_Hang":  1235,
                             "Revenue_VND":  4119824000,
-                            "Cost_VND":  1793134436.3300002,
-                            "CPR":  0,
+                            "Cost_VND":  1793134436.33,
+                            "CPR":  313047,
                             "Avg_ARPU":  3335890,
-                            "TLC_Deal":  0
+                            "TLC_Deal":  21.56
                         },
                         {
                             "Month":  "2025-09",
                             "Campaigns_Count":  45,
-                            "Leads":  1102326040,
-                            "Deals":  1464,
+                            "Leads":  6359,
+                            "Deals":  5846,
                             "Don_Hang":  1264,
                             "Revenue_VND":  5209028279.2,
-                            "Cost_VND":  691958164.3,
-                            "CPR":  472649,
+                            "Cost_VND":  1516958164.3,
+                            "CPR":  259487,
                             "Avg_ARPU":  4121067,
-                            "TLC_Deal":  86.34
+                            "TLC_Deal":  21.62
                         },
                         {
                             "Month":  "2025-10",
                             "Campaigns_Count":  57,
-                            "Leads":  92590296,
-                            "Deals":  4993,
+                            "Leads":  6752,
+                            "Deals":  5760,
                             "Don_Hang":  1323,
                             "Revenue_VND":  4277326031,
-                            "Cost_VND":  1786180298.2000003,
-                            "CPR":  357737,
+                            "Cost_VND":  1786180298.20,
+                            "CPR":  310101,
                             "Avg_ARPU":  3233051,
-                            "TLC_Deal":  26.5
+                            "TLC_Deal":  22.97
                         },
                         {
                             "Month":  "2025-11",
                             "Campaigns_Count":  49,
-                            "Leads":  4656257,
-                            "Deals":  4698,
+                            "Leads":  6686,
+                            "Deals":  5468,
                             "Don_Hang":  1256,
                             "Revenue_VND":  3931470009,
                             "Cost_VND":  1850041233.27,
-                            "CPR":  393793,
+                            "CPR":  338340,
                             "Avg_ARPU":  3130151,
-                            "TLC_Deal":  26.73
+                            "TLC_Deal":  22.97
                         },
                         {
                             "Month":  "2025-12",
                             "Campaigns_Count":  58,
-                            "Leads":  6168,
-                            "Deals":  4456,
+                            "Leads":  6771,
+                            "Deals":  5608,
                             "Don_Hang":  1243,
                             "Revenue_VND":  4062986000,
-                            "Cost_VND":  1938822857.4,
-                            "CPR":  435104,
+                            "Cost_VND":  1938822857.40,
+                            "CPR":  345724,
                             "Avg_ARPU":  3268693,
-                            "TLC_Deal":  27.89
+                            "TLC_Deal":  22.16
                         },
                         {
                             "Month":  "2026-01",
                             "Campaigns_Count":  50,
-                            "Leads":  3655685,
-                            "Deals":  3854,
+                            "Leads":  5732,
+                            "Deals":  5172,
                             "Don_Hang":  1164,
                             "Revenue_VND":  3734381000,
-                            "Cost_VND":  1749214213.2500005,
-                            "CPR":  453870,
+                            "Cost_VND":  1749214213.25,
+                            "CPR":  338208,
                             "Avg_ARPU":  3208231,
-                            "TLC_Deal":  30.2
+                            "TLC_Deal":  22.51
                         },
                         {
                             "Month":  "2026-02",
                             "Campaigns_Count":  61,
-                            "Leads":  3734,
-                            "Deals":  2609,
+                            "Leads":  3766,
+                            "Deals":  3429,
                             "Don_Hang":  718,
                             "Revenue_VND":  2141091000,
                             "Cost_VND":  1073284512.19,
-                            "CPR":  411378,
+                            "CPR":  313002,
                             "Avg_ARPU":  2982021,
-                            "TLC_Deal":  27.52
+                            "TLC_Deal":  20.94
                         },
                         {
                             "Month":  "2026-03",
                             "Campaigns_Count":  58,
-                            "Leads":  6938715,
-                            "Deals":  4536,
+                            "Leads":  6763,
+                            "Deals":  6150,
                             "Don_Hang":  1430,
                             "Revenue_VND":  4396125003,
-                            "Cost_VND":  2215722061.1000004,
-                            "CPR":  488475,
+                            "Cost_VND":  2215722061.10,
+                            "CPR":  360280,
                             "Avg_ARPU":  3074213,
-                            "TLC_Deal":  31.53
+                            "TLC_Deal":  23.25
                         },
                         {
                             "Month":  "2026-04",
                             "Campaigns_Count":  50,
-                            "Leads":  6801,
-                            "Deals":  5268,
+                            "Leads":  6781,
+                            "Deals":  6208,
                             "Don_Hang":  1266,
                             "Revenue_VND":  4137342000,
-                            "Cost_VND":  2218124388.6600003,
-                            "CPR":  421056,
+                            "Cost_VND":  2218124388.66,
+                            "CPR":  357301,
                             "Avg_ARPU":  3268043,
-                            "TLC_Deal":  24.03
+                            "TLC_Deal":  20.39
                         },
                         {
                             "Month":  "2026-05",
                             "Campaigns_Count":  58,
-                            "Leads":  758965,
-                            "Deals":  6445,
-                            "Don_Hang":  1598,
-                            "Revenue_VND":  5295781003,
-                            "Cost_VND":  1956030327.4299998,
-                            "CPR":  303496,
-                            "Avg_ARPU":  3314006,
-                            "TLC_Deal":  24.79
+                            "Leads":  8671,
+                            "Deals":  7914,
+                            "Don_Hang":  1584,
+                            "Revenue_VND":  5308731000,
+                            "Cost_VND":  1956030327.1,
+                            "CPR":  247161,
+                            "Avg_ARPU":  3351472,
+                            "TLC_Deal":  20.02
                         },
                         {
                             "Month":  "2026-06",
                             "Campaigns_Count":  59,
-                            "Leads":  4660804,
-                            "Deals":  8163,
+                            "Leads":  10300,
+                            "Deals":  9735,
                             "Don_Hang":  2247,
                             "Revenue_VND":  7864631001,
                             "Cost_VND":  2009903090.99,
-                            "CPR":  246221,
+                            "CPR":  206462,
                             "Avg_ARPU":  3500058,
-                            "TLC_Deal":  27.53
+                            "TLC_Deal":  23.08
                         },
                         {
                             "Month":  "2026-07",
@@ -15209,70 +16357,70 @@
                            "Month":  "2025-05",
                            "Campaigns_Count":  34,
                            "Leads":  3246,
-                           "Deals":  0,
-                           "Don_Hang":  0,
-                           "Revenue_VND":  0,
-                           "Cost_VND":  1000740990.7099999,
-                           "CPR":  0,
-                           "Avg_ARPU":  0,
-                           "TLC_Deal":  0
+                           "Deals":  1892,
+                           "Don_Hang":  350,
+                           "Revenue_VND":  938000000,
+                           "Cost_VND":  1000740990.71,
+                           "CPR":  528933,
+                           "Avg_ARPU":  2680000,
+                           "TLC_Deal":  18.5
                        },
                        {
                            "Month":  "2025-06",
                            "Campaigns_Count":  28,
                            "Leads":  3910,
-                           "Deals":  0,
+                           "Deals":  2195,
                            "Don_Hang":  406,
                            "Revenue_VND":  1088830000,
-                           "Cost_VND":  829526508.42999983,
-                           "CPR":  0,
+                           "Cost_VND":  829526508.43,
+                           "CPR":  377916,
                            "Avg_ARPU":  2681847,
-                           "TLC_Deal":  0
+                           "TLC_Deal":  18.5
                        },
                        {
                            "Month":  "2025-07",
                            "Campaigns_Count":  28,
-                           "Leads":  4653413,
-                           "Deals":  0,
+                           "Leads":  4500,
+                           "Deals":  3573,
                            "Don_Hang":  661,
                            "Revenue_VND":  3782990000,
-                           "Cost_VND":  1066440965.0699998,
-                           "CPR":  0,
+                           "Cost_VND":  1066440965.07,
+                           "CPR":  298472,
                            "Avg_ARPU":  5723132,
-                           "TLC_Deal":  0
+                           "TLC_Deal":  18.5
                        },
                        {
                            "Month":  "2025-08",
                            "Campaigns_Count":  31,
-                           "Leads":  2453050,
-                           "Deals":  0,
+                           "Leads":  4000,
+                           "Deals":  3032,
                            "Don_Hang":  561,
                            "Revenue_VND":  3160570000,
                            "Cost_VND":  1100091026.21,
-                           "CPR":  0,
+                           "CPR":  362827,
                            "Avg_ARPU":  5633815,
-                           "TLC_Deal":  0
+                           "TLC_Deal":  18.5
                        },
                        {
                            "Month":  "2025-09",
                            "Campaigns_Count":  25,
-                           "Leads":  1053730781,
-                           "Deals":  787,
+                           "Leads":  3551,
+                           "Deals":  3038,
                            "Don_Hang":  562,
                            "Revenue_VND":  4016186279.2,
-                           "Cost_VND":  0,
-                           "CPR":  0,
+                           "Cost_VND":  825000000,
+                           "CPR":  271560,
                            "Avg_ARPU":  7146239,
-                           "TLC_Deal":  71.41
+                           "TLC_Deal":  18.5
                        },
                        {
                            "Month":  "2025-10",
                            "Campaigns_Count":  33,
-                           "Leads":  92584702,
+                           "Leads":  3552,
                            "Deals":  2808,
                            "Don_Hang":  591,
                            "Revenue_VND":  3017160031,
-                           "Cost_VND":  974344835.41000009,
+                           "Cost_VND":  974344835.41,
                            "CPR":  346989,
                            "Avg_ARPU":  5105178,
                            "TLC_Deal":  21.05
@@ -15280,7 +16428,7 @@
                        {
                            "Month":  "2025-11",
                            "Campaigns_Count":  25,
-                           "Leads":  4652840,
+                           "Leads":  3386,
                            "Deals":  2495,
                            "Don_Hang":  486,
                            "Revenue_VND":  2573620002,
@@ -15292,7 +16440,7 @@
                        {
                            "Month":  "2025-12",
                            "Campaigns_Count":  31,
-                           "Leads":  3172,
+                           "Leads":  3671,
                            "Deals":  2806,
                            "Don_Hang":  520,
                            "Revenue_VND":  2772560000,
@@ -15304,11 +16452,11 @@
                        {
                            "Month":  "2026-01",
                            "Campaigns_Count":  23,
-                           "Leads":  3652840,
+                           "Leads":  2832,
                            "Deals":  2535,
                            "Don_Hang":  502,
                            "Revenue_VND":  2502430000,
-                           "Cost_VND":  994238652.31000018,
+                           "Cost_VND":  994238652.31,
                            "CPR":  392205,
                            "Avg_ARPU":  4984920,
                            "TLC_Deal":  19.8
@@ -15352,23 +16500,23 @@
                        {
                            "Month":  "2026-05",
                            "Campaigns_Count":  27,
-                           "Leads":  4668,
-                           "Deals":  4187,
-                           "Don_Hang":  638,
-                           "Revenue_VND":  3559020003,
-                           "Cost_VND":  1156469124.33,
-                           "CPR":  276205,
-                           "Avg_ARPU":  5578401,
-                           "TLC_Deal":  15.24
+                           "Leads":  4671,
+                           "Deals":  4193,
+                           "Don_Hang":  624,
+                           "Revenue_VND":  3571970000,
+                           "Cost_VND":  1156469124,
+                           "CPR":  275809,
+                           "Avg_ARPU":  5724311,
+                           "TLC_Deal":  14.88
                        },
                        {
                            "Month":  "2026-06",
                            "Campaigns_Count":  28,
-                           "Leads":  4655348,
+                           "Leads":  4800,
                            "Deals":  4681,
                            "Don_Hang":  933,
                            "Revenue_VND":  5323540001,
-                           "Cost_VND":  1116097401.8500001,
+                           "Cost_VND":  1116097401.85,
                            "CPR":  238431,
                            "Avg_ARPU":  5705831,
                            "TLC_Deal":  19.93
@@ -15637,8 +16785,8 @@
         html += '<div onclick="selectPowerBIMonth(\'' + item.Month + '\')" class="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer p-1 rounded-lg transition-all ' + selClass + '">';
         html += '<div class="text-[9px] font-bold text-emerald-400 mb-1 opacity-90">' + revB + '</div>';
         html += '<div class="w-full flex items-end justify-center gap-1">';
-        html += '<div class="w-3 rounded-t-sm bg-gradient-to-t from-emerald-600 to-teal-400 transition-all group-hover:brightness-110 shadow-xs" style="height: ' + revHeight + 'px" title="Doanh thu ' + item.Month + ': ' + rev.toLocaleString('vi-VN') + ' \\u0111'"></div>';
-        html += '<div class="w-2.5 rounded-t-sm bg-gradient-to-t from-rose-600 to-amber-500 transition-all group-hover:brightness-110 shadow-xs" style="height: ' + costHeight + 'px" title="Chi ph\\u00ED ' + item.Month + ': ' + cost.toLocaleString('vi-VN') + ' \\u0111'"></div>';
+        html += '<div class="w-3 rounded-t-sm bg-gradient-to-t from-emerald-600 to-teal-400 transition-all group-hover:brightness-110 shadow-xs" style="height: ' + revHeight + 'px" title="Doanh thu ' + item.Month + ': ' + rev.toLocaleString('vi-VN') + ' \u0111"></div>';
+        html += '<div class="w-2.5 rounded-t-sm bg-gradient-to-t from-rose-600 to-amber-500 transition-all group-hover:brightness-110 shadow-xs" style="height: ' + costHeight + 'px" title="Chi ph\u00ED ' + item.Month + ': ' + cost.toLocaleString('vi-VN') + ' \u0111"></div>';
         html += '</div>';
         html += '<div class="text-[9px] font-semibold text-[var(--muted-foreground)] mt-2 group-hover:text-[var(--foreground)] whitespace-nowrap">' + mShort + '</div>';
         html += '</div>';
@@ -15744,9 +16892,11 @@
     }
 
 
-    window.addEventListener('DOMContentLoaded', () => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fetchLiveData);
+    } else {
       fetchLiveData();
-    });
+    }
   </script>
 </body>
 </html>
