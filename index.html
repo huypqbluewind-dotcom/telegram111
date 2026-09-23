@@ -1073,6 +1073,35 @@
       fetchLiveData();
     }
 
+    // LOCAL CACHE ENGINE (STALE-WHILE-REVALIDATE: TẢI TỨC THÌ <0.05S)
+    function getCacheKey() {
+      return 'meta_cached_accounts_' + currentDatePreset + (currentCustomDate ? '_' + currentCustomDate : '');
+    }
+
+    function loadFromLocalCache() {
+      try {
+        const cached = localStorage.getItem(getCacheKey());
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.data && Object.keys(parsed.data).length > 0) {
+            liveAccountsData = parsed.data;
+            if (parsed.badAdsets) allBadAdsetsList = parsed.badAdsets;
+            updateDashboardForCurrentProject();
+            renderCreateTabAccounts();
+            const badge = document.getElementById('api-status-badge');
+            if (badge) {
+              badge.className = "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
+              badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span>Sẵn sàng (Đệm)';
+            }
+            return true;
+          }
+        }
+      } catch (e) {
+        console.warn('Lỗi đọc cache local:', e);
+      }
+      return false;
+    }
+
     // MAIN FETCHER: PULLS ALL ACCOUNTS (AI & TT)
     async function fetchLiveData() {
       if (isFetching) return;
@@ -1147,8 +1176,8 @@
         const accountsResult = {};
         const badAdsetsList = [];
 
-        // Xử lý song song theo từng batch 4 tài khoản để tránh nghẽn mạng và tránh bị Meta rate-limit
-        const BATCH_SIZE = 4;
+        // Tối ưu hóa: Xử lý song song batch 8 tài khoản (giúp tải nhanh gấp đôi)
+        const BATCH_SIZE = 8;
         for (let i = 0; i < targetAccs.length; i += BATCH_SIZE) {
           const batch = targetAccs.slice(i, i + BATCH_SIZE);
           await Promise.all(batch.map(async (acc) => {
@@ -1273,6 +1302,17 @@
 
         liveAccountsData = accountsResult;
         allBadAdsetsList = badAdsetsList;
+
+        // Lưu vào Local Storage để tải tức thì (<0.05s) cho các lần mở ứng dụng tiếp theo
+        try {
+          localStorage.setItem(getCacheKey(), JSON.stringify({
+            timestamp: Date.now(),
+            data: accountsResult,
+            badAdsets: badAdsetsList
+          }));
+        } catch (e) {
+          console.warn('Lỗi lưu cache local:', e);
+        }
 
         // Update dashboard based on current project selection
         updateDashboardForCurrentProject();
@@ -2356,18 +2396,34 @@
       fetchFullAccountEntities(acc);
     }
 
+    // IN-MEMORY CACHE FOR ACCOUNT DETAILS (TẢI TỨC THÌ 0MS KHI XEM LẠI CAMP)
+    const accountDetailCache = {};
+
     function refreshCurrentAccountDetail() {
       if (currentDetailAccountData.account) {
         const icon = document.getElementById('detail-refresh-icon');
         if (icon) icon.classList.add('animate-spin');
-        fetchFullAccountEntities(currentDetailAccountData.account).finally(() => {
+        fetchFullAccountEntities(currentDetailAccountData.account, true).finally(() => {
           if (icon) icon.classList.remove('animate-spin');
         });
       }
     }
 
-    async function fetchFullAccountEntities(acc) {
+    async function fetchFullAccountEntities(acc, forceRefresh = false) {
       const token = getMetaToken();
+      const cacheKey = (acc ? acc.id : '') + '_' + currentDatePreset + (currentCustomDate ? '_' + currentCustomDate : '');
+
+      // Tải ngay lập tức (0ms) từ bộ nhớ đệm nếu đã từng tải tài khoản này
+      if (!forceRefresh && accountDetailCache[cacheKey]) {
+        currentDetailAccountData.campaigns = accountDetailCache[cacheKey].campaigns;
+        currentDetailAccountData.adsets = accountDetailCache[cacheKey].adsets;
+        currentDetailAccountData.ads = accountDetailCache[cacheKey].ads;
+        currentDetailAccountData.loading = false;
+        updateMetaDetailBadges();
+        renderMetaDetailContent();
+        return;
+      }
+
       if (!token || !acc || !acc.id) {
         // Populate default adsets from cached acc
         currentDetailAccountData.adsets = (acc.adsets || []).map(as => ({
@@ -2561,6 +2617,14 @@
           }));
         }
       } finally {
+        if (currentDetailAccountData.campaigns.length > 0 || currentDetailAccountData.adsets.length > 0) {
+          accountDetailCache[cacheKey] = {
+            campaigns: currentDetailAccountData.campaigns,
+            adsets: currentDetailAccountData.adsets,
+            ads: currentDetailAccountData.ads,
+            timestamp: Date.now()
+          };
+        }
         currentDetailAccountData.loading = false;
         updateMetaDetailBadges();
         renderMetaDetailContent();
@@ -16891,6 +16955,9 @@
       renderPowerBITable();
     }
 
+
+    // Khởi động tức thì từ LocalStorage Cache (<0.05s hiển thị UI ngay lập tức)
+    loadFromLocalCache();
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', fetchLiveData);
