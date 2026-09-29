@@ -198,6 +198,28 @@ span.dt{display:inline}
 @media(max-width:600px){table.am th.nm,table.am td.nm{min-width:205px;max-width:215px}table.am th,table.am td{padding:8px 7px}.amname{gap:6px}.amtabs .long{display:none}.sw{width:30px;height:18px}.sw::after{width:14px;height:14px}.sw.on::after{transform:translateX(12px)}}
 @media(min-width:601px){.amtabs .short{display:none}}
 body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
+
+/* ===== Bộ chọn thời gian ===== */
+.datebtn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;border:1px solid var(--border);background:var(--card);text-align:left;min-width:0}
+.datebtn:hover{border-color:#1877f2}
+.sheet.dpsheet{max-width:860px}
+.dpgrid{display:grid;grid-template-columns:190px 1fr;gap:14px}
+.dppre{display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border);padding-right:10px}
+.dpopt{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;font-size:13px;cursor:pointer}
+.dpopt:hover{background:var(--secondary)} .dpopt.on{background:rgba(24,119,242,.15);color:#bcd6ff;font-weight:700}
+.dpopt .rd{width:14px;height:14px;border-radius:50%;border:2px solid #64748b;flex:none}.dpopt.on .rd{border:4px solid #1877f2;background:#fff}
+.calwrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.calhd{text-align:center;font-weight:700;font-size:13px;margin-bottom:6px}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px 0}
+.calg .wd{font-size:11px;color:var(--faint);text-align:center;padding:4px 0}
+.day{height:34px;font-size:13px;border-radius:0;color:var(--foreground)}
+.day:hover:not(.dis){background:var(--secondary);border-radius:8px}
+.day.in{background:rgba(24,119,242,.2)}
+.day.st,.day.en{background:#1877f2!important;color:#fff;font-weight:700}
+.day.st{border-radius:8px 0 0 8px}.day.en{border-radius:0 8px 8px 0}.day.st.en{border-radius:8px}
+.day.td{text-decoration:underline;text-underline-offset:3px}
+.day.dis{color:#3b475d;cursor:default}
+@media(max-width:759px){.dpgrid{grid-template-columns:1fr}.dppre{flex-direction:row;flex-wrap:wrap;border-right:0;padding-right:0;gap:6px}.dpopt{border:1px solid var(--border);padding:5px 10px;font-size:12px}.dpopt .rd{display:none}}
 </style>
 </head>
 <body>
@@ -241,7 +263,7 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
   <!-- ===================== TAB: HIỆU SUẤT ===================== -->
   <section id="v-perf" class="hidden">
     <div class="row wrapf" style="gap:8px;margin:4px 0 10px">
-      <div class="seg grow" id="perfWin" style="min-width:260px"><button data-win="today" class="on">Hôm nay</button><button data-win="yesterday">Hôm qua</button><button data-win="last3">3 ngày</button><button data-win="last7">7 ngày</button></div>
+      <button class="datebtn grow" data-act="datePicker"><span>📅</span><span class="grow" style="text-align:left;min-width:0"><b id="dateLbl" class="trunc" style="display:block">Hôm nay</b><span id="dateCmp" class="xs muted trunc" style="display:block"></span></span><span class="muted">▾</span></button>
     </div>
     <details id="perfOverview" class="card" style="padding:10px 12px">
       <summary class="row between"><b class="sm">📈 Tổng quan &amp; biểu đồ 8 ngày</b><span id="ovMini" class="xs muted"></span></summary>
@@ -749,7 +771,7 @@ async function fetchAll() {
       }
     };
     await Promise.all([worker(), worker(), worker(), worker()]);
-    D = store;
+    D = store; Object.keys(RANGE_STATE).forEach(kk => delete RANGE_STATE[kk]);
     if (!demoMode) { try { LS.set('ao_cache', D); } catch (e) {} }
     setStatus(demoMode ? 'demo' : 'live');
   } catch (e) {
@@ -1128,7 +1150,7 @@ function toast(msg, kind = 'info', ms = 2800) {
   clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), ms);
 }
 function openSheet(html) { $('sheet').innerHTML = html; $('ov').classList.remove('hidden'); }
-function closeSheet() { $('ov').classList.add('hidden'); }
+function closeSheet() { $('ov').classList.add('hidden'); $('sheet').classList.remove('dpsheet'); }
 
 function renderAll() {
   if (!focusDay) focusDay = vnNow().getUTCHours() < 10 ? 'yesterday' : 'today';
@@ -1332,7 +1354,7 @@ function budgetInfo(lvl, id) {
 }
 
 function amRows(lvl) {
-  const dates = winDates(perfWin);
+  const dates = curKeys();
   const rows = [];
   const push = (id, meta, m, extra) => {
     if (!meta || !inScope(meta.project)) return;
@@ -1342,7 +1364,7 @@ function amRows(lvl) {
   };
   if (lvl === 'campaign') {
     const map = {};
-    const pdates = prevDates(perfWin).filter(Boolean), psc = prevScale(perfWin);
+    const pdates = prevKeys(), psc = prevF();
     Object.values(D.campaigns).forEach(c => { if (inScope(c.project)) map[c.id] = { meta: Object.assign({}, c), m: emptyM(), pm: emptyM() }; });
     Object.values(D.ins.adset).forEach(e => {
       if (!e.campaignId || !inScope(e.project)) return;
@@ -1366,7 +1388,7 @@ function amRows(lvl) {
       }
       const m = agg(src[id], dates);
       const parent = lvl === 'adset' ? (meta.campaignName || (D.campaigns[meta.campaignId] || {}).name || '') : ((D.adsets[meta.adsetId] || D.ins.adset[meta.adsetId] || {}).name || '');
-      push(id, meta, m, { sub: parent, thumb: (live[id] || {}).thumb || '', story: (live[id] || {}).story || '', pm: aggPrev(src[id], perfWin) });
+      push(id, meta, m, { sub: parent, thumb: (live[id] || {}).thumb || '', story: (live[id] || {}).story || '', pm: aggKeys(src[id], prevKeys(), prevF()) });
     });
   }
   const q = perfQuery.toLowerCase();
@@ -1390,17 +1412,24 @@ function amRows(lvl) {
 
 function renderPerf() {
   if (!D) { $('perfKpi').innerHTML = ''; $('amTable').innerHTML = '<div class="empty">Chưa có dữ liệu.</div>'; $('amTabs').innerHTML = ''; return; }
-  document.querySelectorAll('#perfWin button').forEach(b => b.classList.toggle('on', b.dataset.win === perfWin));
-  const dates = winDates(perfWin);
+  $('dateLbl').textContent = curLabel();
+  $('dateCmp').textContent = amCompare ? 'So với ' + prevLabel() : '';
+  if (!rangeReady()) {
+    ensureRange();
+    $('amTabs').innerHTML = ''; $('perfKpi').innerHTML = ''; $('ovMini').innerHTML = '';
+    $('amTable').innerHTML = '<div class="empty"><span class="spin" style="display:inline-block">⟳</span> Đang tải số liệu ' + esc(curLabel()) + '…</div>';
+    return;
+  }
+  const dates = curKeys();
   const m = projAgg(currentProject, dates);
   const K = scopeTarget().v;
-  const days = perfWin === 'today' || perfWin === 'yesterday' ? 1 : dates.length;
+  const days = rangeDays();
   const c = !K || !m.r ? '' : m.cpr <= K ? 'good' : m.cpr <= K * S.cutX ? 'warn' : 'bad';
-  { const pmm = projAggPrev(currentProject, perfWin); const dd = m.r && pmm.r ? dlt(m.cpr, pmm.cpr, 'down').replace('<div class="dt', '<span class="dt').replace('</div>', '</span>') : '';
+  { const pmm = projAggKeys(currentProject, prevKeys(), prevF()); const dd = m.r && pmm.r ? dlt(m.cpr, pmm.cpr, 'down').replace('<div class="dt', '<span class="dt').replace('</div>', '</span>') : '';
     $('ovMini').innerHTML = `${k(m.s)} · ${m.r} KQ · CPR <b class="${c}">${m.r ? k(m.cpr) : '—'}</b> ${dd}`; }
-  const pm = projAggPrev(currentProject, perfWin);
+  const pm = projAggKeys(currentProject, prevKeys(), prevF());
   const kd = (cur, key, kind, ok) => ok ? dlt(cur, pm[key], kind) : '';
-  $('perfKpi').innerHTML = `<div class="xs muted" style="margin-bottom:6px">So với ${PREV_LABEL[perfWin]}</div><div class="kgrid">
+  $('perfKpi').innerHTML = `<div class="xs muted" style="margin-bottom:6px">So với ${esc(prevLabel())}</div><div class="kgrid">
     <div class="kpi"><div class="l">Chi tiêu</div><div class="v num">${k(m.s)}</div>${kd(m.s, 's', 'n', true)}</div>
     <div class="kpi"><div class="l">Kết quả</div><div class="v num">${nf.format(m.r)}</div>${kd(m.r, 'r', 'up', true)}</div>
     <div class="kpi"><div class="l">CPR · mục tiêu ${K ? k(K) : '—'}</div><div class="v num ${c}">${m.r ? k(m.cpr) : '—'}</div>${kd(m.cpr, 'cpr', 'down', m.r && pm.r)}</div>
@@ -1471,7 +1500,7 @@ function renderAmTable() {
   });
   const t = emptyM(), tp = emptyM(); rows.forEach(r => { addInto(t, r.m); if (r.pm) addInto(tp, r.pm); }); fin(t); fin(tp);
   const T_ = (cur, key, kind, ok) => amCompare && ok ? dlt(cur, tp[key], kind) : '';
-  h += `</tbody><tfoot><tr><td class="nm"><div>Kết quả từ ${rows.length} ${AM_LVL_NAME[amLvl]}</div><div class="xs faint" style="font-weight:500">${WIN_LABEL[perfWin]}${amCompare ? ' · so với ' + PREV_LABEL[perfWin] : ''}</div></td>
+  h += `</tbody><tfoot><tr><td class="nm"><div>Kết quả từ ${rows.length} ${AM_LVL_NAME[amLvl]}</div><div class="xs faint" style="font-weight:500">${esc(curLabel())}${amCompare ? ' · so với ' + esc(prevLabel()) : ''}</div></td>
     <td></td><td></td><td>${t.r ? nf.format(t.r) : '—'}${T_(t.r, 'r', 'up', true)}</td><td>${t.r ? vnd(t.cpr) : '—'}${T_(t.cpr, 'cpr', 'down', t.r && tp.r)}</td><td>${vnd(t.s)}${T_(t.s, 's', 'n', true)}</td><td>${nf.format(t.imp)}${T_(t.imp, 'imp', 'n', true)}</td><td>${nf.format(t.lc)}${T_(t.lc, 'lc', 'up', true)}</td><td>${t.imp ? pct(t.ctrL) : '—'}${T_(t.ctrL, 'ctrL', 'up', t.imp)}</td><td>${t.lc ? vnd(t.cpc) : '—'}${T_(t.cpc, 'cpc', 'down', t.lc)}</td><td>${t.imp ? vnd(t.cpm) : '—'}${T_(t.cpm, 'cpm', 'down', t.imp)}</td><td>${t.lc ? pct(t.cr) : '—'}${T_(t.cr, 'cr', 'up', t.lc && tp.lc)}</td></tr></tfoot></table>`;
   const wrap = $('amTable'); const sx = wrap.scrollLeft, sy = wrap.scrollTop;
   wrap.innerHTML = h; wrap.scrollLeft = sx; wrap.scrollTop = sy;
@@ -1504,7 +1533,7 @@ function creativeKey(adId) {
   return 'n:' + n;
 }
 function creativeGroups() {
-  const dates = winDates(perfWin);
+  const dates = curKeys(), pkeys = prevKeys(), pf = prevF();
   const groups = {};
   const ids = new Set([...Object.keys(D.ads), ...Object.keys(D.ins.ad)]);
   ids.forEach(id => {
@@ -1513,7 +1542,7 @@ function creativeGroups() {
     if (!inScope(meta.project)) return;
     if (amSel.adset.size && !amSel.adset.has(meta.adsetId)) return;
     if (!amSel.adset.size && amSel.campaign.size && !amSel.campaign.has(meta.campaignId)) return;
-    const m = agg(ins, dates), pm = aggPrev(ins, perfWin);
+    const m = aggKeys(ins, dates), pm = aggKeys(ins, pkeys, pf);
     const on = adOn(id);
     if (!m.s && !on) return;
     const key = creativeKey(id);
@@ -1577,7 +1606,7 @@ function renderCreativeTable() {
     h += '</tr>';
   });
   const t = emptyM(); rows.forEach(g => addInto(t, g.m)); fin(t);
-  h += `</tbody><tfoot><tr><td class="nm"><div>${rows.length} creative</div><div class="xs faint" style="font-weight:500">${WIN_LABEL[perfWin]} · gom theo ${crGroup === 'content' ? 'hình/video' : 'tên quảng cáo'}</div></td><td></td><td></td><td>${t.r || '—'}</td><td>${t.r ? vnd(t.cpr) : '—'}</td><td>${vnd(t.s)}</td><td>${t.imp ? pct(t.ctrL) : '—'}</td><td>${t.imp ? vnd(t.cpm) : '—'}</td><td>${t.v3 ? pct(t.hook, 1) : '—'}</td><td>${t.v3 ? pct(t.hold, 1) : '—'}</td><td>${t.v3 ? pct(t.comp, 1) : '—'}</td></tr></tfoot></table>`;
+  h += `</tbody><tfoot><tr><td class="nm"><div>${rows.length} creative</div><div class="xs faint" style="font-weight:500">${esc(curLabel())} · gom theo ${crGroup === 'content' ? 'hình/video' : 'tên quảng cáo'}</div></td><td></td><td></td><td>${t.r || '—'}</td><td>${t.r ? vnd(t.cpr) : '—'}</td><td>${vnd(t.s)}</td><td>${t.imp ? pct(t.ctrL) : '—'}</td><td>${t.imp ? vnd(t.cpm) : '—'}</td><td>${t.v3 ? pct(t.hook, 1) : '—'}</td><td>${t.v3 ? pct(t.hold, 1) : '—'}</td><td>${t.v3 ? pct(t.comp, 1) : '—'}</td></tr></tfoot></table>`;
   const wrap = $('amTable'); const sx = wrap.scrollLeft; wrap.innerHTML = h; wrap.scrollLeft = sx;
   window._crList = list;
   $('crNote').innerHTML = `Gom theo: <button class="lnk xs" data-crgroup="content" style="padding:0;${crGroup === 'content' ? 'text-decoration:underline' : 'opacity:.6'}">hình/video thật</button> · <button class="lnk xs" data-crgroup="name" style="padding:0;${crGroup === 'name' ? 'text-decoration:underline' : 'opacity:.6'}">tên quảng cáo</button>
@@ -1597,7 +1626,7 @@ function openCreative(key) {
   const ads = g.ads.slice().sort((a, b) => b.m.s - a.m.s).map(x => { const d = statusDot(x.m, g.K); const as = D.adsets[x.adsetId] || D.ins.adset[x.adsetId] || {}; return `<tr><td><span class="lk" data-open="ad:${x.id}" style="color:#7fb2ff;cursor:pointer">${esc(x.name)}</span><div class="xs faint">${x.on ? '● ' : '○ '}${esc(as.name || '')} · ${esc(x.acc || '')}</div></td><td>${k(x.m.s)}</td><td>${x.m.r}</td><td class="${d === 'g' ? 'good' : d === 'a' ? 'warn' : d === 'r' ? 'bad' : ''}"><b>${x.m.r ? k(x.m.cpr) : '—'}</b></td></tr>`; }).join('');
   openSheet(`<div class="grab"></div>
     <div class="row" style="gap:10px;align-items:flex-start">${g.thumb ? `<img class="thumb" style="width:60px;height:60px" src="${esc(g.thumb)}" alt="" onerror="this.remove()">` : `<div class="thumb ph" style="width:60px;height:60px;font-size:24px">${g.video ? '🎬' : '🖼️'}</div>`}
-      <div class="grow"><div class="b" style="font-size:15px;line-height:1.35">${esc(g.name)}</div><div class="xs muted" style="margin-top:3px"><span class="vt ${g.verdict.c}">${g.verdict.t}</span> ${g.rank ? 'Hạng ' + g.rank + ' · ' : ''}${g.video ? 'Video' : 'Ảnh'} · ${g.ads.length} quảng cáo trong ${g.adsets.size} nhóm · ${WIN_LABEL[perfWin]}</div></div></div>
+      <div class="grow"><div class="b" style="font-size:15px;line-height:1.35">${esc(g.name)}</div><div class="xs muted" style="margin-top:3px"><span class="vt ${g.verdict.c}">${g.verdict.t}</span> ${g.rank ? 'Hạng ' + g.rank + ' · ' : ''}${g.video ? 'Video' : 'Ảnh'} · ${g.ads.length} quảng cáo trong ${g.adsets.size} nhóm · ${esc(curLabel())}</div></div></div>
     <div class="mgrid" style="margin-top:12px"><div class="m"><div class="l">Chi tiêu</div><div class="v num">${k(m.s)}</div></div><div class="m"><div class="l">Kết quả · CPR</div><div class="v num">${m.r} · ${m.r ? k(m.cpr) : '—'}</div></div><div class="m"><div class="l">CTR link · CPM</div><div class="v num">${pct(m.ctrL)} · ${k(m.cpm)}</div></div></div>
     ${funnel}
     <div class="b sm" style="margin-top:14px">Các quảng cáo đang dùng creative này</div>
@@ -1616,11 +1645,16 @@ const PLACE_NAME = {
   'messenger|messenger_inbox': 'Messenger · Hộp thư', 'messenger|messenger_stories': 'Messenger · Tin', 'audience_network|an_classic': 'Audience Network', 'audience_network|rewarded_video': 'Audience Network · Video có thưởng', 'threads|threads_feed': 'Threads · Feed'
 };
 const GENDER_NAME = { male: 'Nam', female: 'Nữ', unknown: 'Không rõ' };
+function bdRange(win) {
+  if (win === 'cur') return [PR.since, PR.until];
+  if (win === 'l30') return [vnDay(30), vnDay(1)];
+  return [vnDay(7), vnDay(1)];
+}
 async function loadBreakdown(ent, win, kind) {
-  const key = ent.id + '|' + win + '|' + kind + '|' + S.attribution;
+  const [since, until] = bdRange(win);
+  const key = ent.id + '|' + since + '|' + until + '|' + kind + '|' + S.attribution;
   if (BD_CACHE[key]) return BD_CACHE[key];
-  const dates = winDates(win);
-  const tr = JSON.stringify({ since: dates[dates.length - 1], until: dates[0] });
+  const tr = JSON.stringify({ since, until });
   const breakdowns = kind === 'place' ? 'publisher_platform,platform_position' : 'age,gender';
   const rows = await gget(ent.id + '/insights', Object.assign({ time_range: tr, breakdowns, fields: 'spend,impressions,clicks,inline_link_clicks,actions', limit: 500 }, attrParams()));
   const ev = S.events[ent.project] || 'complete_registration';
@@ -1663,11 +1697,11 @@ function renderBreakdown(box, data, dim, K) {
 }
 function mountBreakdown(ent, K) {
   const host = $('bdHost'); if (!host) return;
-  let win = 'last7', dim = 'age';
+  let win = 'cur', dim = 'age';
   const draw = async () => {
     host.querySelectorAll('[data-bdwin]').forEach(b => b.classList.toggle('on', b.dataset.bdwin === win));
     host.querySelectorAll('[data-bddim]').forEach(b => b.classList.toggle('on', b.dataset.bddim === dim));
-    const box = $('bdBox'); box.innerHTML = '<div class="empty">Đang tải phân tích…</div>';
+    const box = $('bdBox'); const [bs, bu] = bdRange(win); box.innerHTML = '<div class="empty">Đang tải phân tích ' + esc(fmtRange(bs, bu)) + '…</div>';
     try { const data = await loadBreakdown(ent, win, dim === 'place' ? 'place' : 'demo'); if ($('bdBox') === box) renderBreakdown(box, data, dim, K); }
     catch (e) { box.innerHTML = `<div class="empty bad">Không tải được: ${esc(e.message)}</div>`; }
   };
@@ -1678,6 +1712,156 @@ function mountBreakdown(ent, K) {
     draw();
   });
   draw();
+}
+
+// ---------- BỘ CHỌN THỜI GIAN KIỂU FACEBOOK ----------
+const PRESETS = [
+  ['today', 'Hôm nay'], ['yesterday', 'Hôm qua'], ['this_week', 'Tuần này'], ['last_7d', '7 ngày qua'], ['last_week', 'Tuần trước'],
+  ['last_14d', '14 ngày qua'], ['this_month', 'Tháng này'], ['last_28d', '28 ngày qua'], ['last_30d', '30 ngày qua'], ['last_month', 'Tháng trước'], ['last_90d', '90 ngày qua'], ['custom', 'Tùy chỉnh']
+];
+function addDays(s, n) { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function diffDays(a, b) { return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5); }
+function presetRange(p) {
+  const t = vnDay(0), dow = (new Date(t + 'T00:00:00Z').getUTCDay() + 6) % 7; // 0 = thứ 2
+  const m1 = t.slice(0, 8) + '01';
+  switch (p) {
+    case 'today': return [t, t];
+    case 'yesterday': return [addDays(t, -1), addDays(t, -1)];
+    case 'this_week': return [addDays(t, -dow), t];
+    case 'last_week': return [addDays(t, -dow - 7), addDays(t, -dow - 1)];
+    case 'this_month': return [m1, t];
+    case 'last_month': { const e = addDays(m1, -1); return [e.slice(0, 8) + '01', e]; }
+    case 'last_7d': return [addDays(t, -7), addDays(t, -1)];
+    case 'last_14d': return [addDays(t, -14), addDays(t, -1)];
+    case 'last_28d': return [addDays(t, -28), addDays(t, -1)];
+    case 'last_30d': return [addDays(t, -30), addDays(t, -1)];
+    case 'last_90d': return [addDays(t, -90), addDays(t, -1)];
+  }
+  return null;
+}
+let PR = (() => { const s = LS.get('ao_range', null); if (s && s.preset && s.preset !== 'custom') { const r = presetRange(s.preset); return { preset: s.preset, since: r[0], until: r[1] }; } if (s && s.since) return s; const r = presetRange('today'); return { preset: 'today', since: r[0], until: r[1] }; })();
+function prevRange() { const len = diffDays(PR.since, PR.until) + 1; const pu = addDays(PR.since, -1); return [addDays(pu, -(len - 1)), pu]; }
+const MONTHS_SHORT = d => `${+d.slice(8, 10)} thg ${+d.slice(5, 7)}`;
+function fmtRange(a, b) { if (a === b) return `${MONTHS_SHORT(a)}, ${a.slice(0, 4)}`; return `${MONTHS_SHORT(a)}${a.slice(0, 4) !== b.slice(0, 4) ? ', ' + a.slice(0, 4) : ''} – ${MONTHS_SHORT(b)}, ${b.slice(0, 4)}`; }
+function curLabel() { const p = PRESETS.find(x => x[0] === PR.preset); return (p && PR.preset !== 'custom' ? p[1] + ': ' : '') + fmtRange(PR.since, PR.until); }
+function prevLabel() { if (PR.preset === 'today') return 'hôm qua cùng giờ'; const [a, b] = prevRange(); return 'kỳ trước (' + fmtRange(a, b) + ')'; }
+function rangeDays() { return diffDays(PR.since, PR.until) + 1; }
+function datesBetween(a, b) { const out = []; for (let d = a; d <= b; d = addDays(d, 1)) out.push(d); return out; }
+function covered(a, b) { return D && D.days && a >= D.days[D.days.length - 1] && b <= D.days[0]; }
+function rKey(a, b) { return 'R:' + a + '_' + b; }
+function keysFor(a, b) { if (covered(a, b)) return datesBetween(a, b); return [rKey(a, b)]; }
+function curKeys() { return keysFor(PR.since, PR.until); }
+function prevKeys() { const [a, b] = prevRange(); return keysFor(a, b); }
+function prevF() { return PR.preset === 'today' ? expectedFrac() : 1; }
+function aggKeys(entry, keys, f) { const m = emptyM(); if (entry && entry.d) keys.forEach(kk => addInto(m, entry.d[kk])); return fin(scaleM(m, f || 1)); }
+function projAggKeys(proj, keys, f) { const m = emptyM(); Object.values(D.ins.adset).forEach(e => { if (proj === 'ALL' || e.project === proj) keys.forEach(kk => addInto(m, e.d[kk])); }); return fin(scaleM(m, f || 1)); }
+
+// tải dữ liệu cho khoảng ngày ngoài 15 ngày đã có
+const RANGE_STATE = {};
+function rangeReady() {
+  const need = [[PR.since, PR.until], prevRange()].filter(([a, b]) => !covered(a, b));
+  return need.every(([a, b]) => RANGE_STATE[rKey(a, b)] === 'ok');
+}
+async function ensureRange() {
+  if (!D) return;
+  const need = [[PR.since, PR.until], prevRange()].filter(([a, b]) => !covered(a, b) && !RANGE_STATE[rKey(a, b)]);
+  if (!need.length) return;
+  need.forEach(([a, b]) => { RANGE_STATE[rKey(a, b)] = 'loading'; });
+  try {
+    for (const [a, b] of need) {
+      const key = rKey(a, b), tr = JSON.stringify({ since: a, until: b });
+      const q = D.accounts.slice();
+      const worker = async () => {
+        while (q.length) {
+          const acc = q.shift(); const ev = S.events[acc.project] || 'complete_registration';
+          const base = { accId: acc.id, accName: acc.name, project: acc.project };
+          const [as, ad] = await Promise.all([
+            gget(acc.id + '/insights', Object.assign({ level: 'adset', time_range: tr, fields: 'adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,actions', limit: 500 }, attrParams())),
+            gget(acc.id + '/insights', Object.assign({ level: 'ad', time_range: tr, fields: 'ad_id,ad_name,adset_id,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions', limit: 500 }, attrParams()))
+          ]);
+          (as || []).forEach(it => { const e = D.ins.adset[it.adset_id] || (D.ins.adset[it.adset_id] = Object.assign({}, base, { id: it.adset_id, name: it.adset_name, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} })); e.d[key] = addInto(e.d[key] || emptyM(), parseRow(it, ev)); });
+          (ad || []).forEach(it => { const e = D.ins.ad[it.ad_id] || (D.ins.ad[it.ad_id] = Object.assign({}, base, { id: it.ad_id, name: it.ad_name, adsetId: it.adset_id, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} })); e.d[key] = addInto(e.d[key] || emptyM(), parseRow(it, ev)); });
+        }
+      };
+      await Promise.all([worker(), worker(), worker(), worker()]);
+      RANGE_STATE[key] = 'ok';
+    }
+  } catch (e) {
+    need.forEach(([a, b]) => { delete RANGE_STATE[rKey(a, b)]; });
+    toast('Không tải được khoảng ngày: ' + e.message, 'err', 6000);
+  }
+  if (currentTab === 'perf') renderPerf();
+}
+
+// ---------- giao diện bộ chọn ----------
+let DP = null; // trạng thái tạm khi đang mở bộ chọn
+function openDatePicker() {
+  DP = { preset: PR.preset, since: PR.since, until: PR.until, picking: false, view: PR.until.slice(0, 7), cmp: amCompare };
+  openSheet('<div id="dpBox"></div>');
+  $('sheet').classList.add('dpsheet');
+  drawDatePicker();
+}
+function monthGrid(ym) {
+  const first = ym + '-01', dow = (new Date(first + 'T00:00:00Z').getUTCDay() + 6) % 7;
+  const nDays = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).getUTCDate();
+  const today = vnDay(0), min = addDays(today, -37 * 30);
+  let h = `<div class="cal"><div class="calhd">Tháng ${+ym.slice(5, 7)}, ${ym.slice(0, 4)}</div><div class="calg">${['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(x => `<span class="wd">${x}</span>`).join('')}`;
+  for (let i = 0; i < dow; i++) h += '<span></span>';
+  for (let d = 1; d <= nDays; d++) {
+    const ds = ym + '-' + String(d).padStart(2, '0');
+    const dis = ds > today || ds < min;
+    const inR = ds >= DP.since && ds <= DP.until;
+    const cls = [dis ? 'dis' : '', inR ? 'in' : '', ds === DP.since ? 'st' : '', ds === DP.until ? 'en' : '', ds === today ? 'td' : ''].join(' ');
+    h += `<button class="day ${cls}" ${dis ? 'disabled' : `data-dpday="${ds}"`}>${d}</button>`;
+  }
+  return h + '</div></div>';
+}
+function shiftMonth(ym, n) { const d = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + n, 1)); return d.toISOString().slice(0, 7); }
+function drawDatePicker() {
+  const wide = window.innerWidth >= 760;
+  const months = wide ? [shiftMonth(DP.view, -1), DP.view] : [DP.view];
+  const len = diffDays(DP.since, DP.until) + 1, pu = addDays(DP.since, -1), ps = addDays(pu, -(len - 1));
+  $('dpBox').innerHTML = `
+    <div class="row between" style="margin-bottom:10px"><b style="font-size:16px">Chọn khoảng thời gian</b><button class="iconbtn" data-act="closeSheet" style="width:32px;height:32px">✕</button></div>
+    <div class="dpgrid">
+      <div class="dppre">${PRESETS.map(([p, l]) => `<button class="dpopt ${DP.preset === p ? 'on' : ''}" data-dppre="${p}"><span class="rd"></span>${l}</button>`).join('')}</div>
+      <div class="dpcal">
+        <div class="row between" style="margin-bottom:6px"><button class="iconbtn" data-dpnav="-1" style="width:32px;height:32px">‹</button><span class="xs muted">${DP.picking ? 'Chọn ngày kết thúc' : 'Chọn ngày bắt đầu'}</span><button class="iconbtn" data-dpnav="1" style="width:32px;height:32px" ${DP.view >= vnDay(0).slice(0, 7) ? 'disabled' : ''}>›</button></div>
+        <div class="calwrap">${months.map(monthGrid).join('')}</div>
+        <div class="row" style="gap:8px;margin-top:10px"><input type="date" class="field num" id="dpS" value="${DP.since}" max="${vnDay(0)}"><span class="muted">–</span><input type="date" class="field num" id="dpU" value="${DP.until}" max="${vnDay(0)}"></div>
+      </div>
+    </div>
+    <label class="row" style="gap:8px;margin-top:12px"><input type="checkbox" class="chk" id="dpCmp" ${DP.cmp ? 'checked' : ''}> <span class="sm">So sánh với ${DP.preset === 'today' ? 'hôm qua cùng giờ' : 'kỳ trước: ' + fmtRange(ps, pu)}</span></label>
+    <div class="row between wrapf" style="margin-top:14px;gap:8px"><span class="xs muted">Múi giờ: Giờ Việt Nam (GMT+7)</span>
+      <div class="row"><button class="btn" data-act="closeSheet">Hủy</button><button class="btn p" id="dpApply">Cập nhật</button></div></div>`;
+  $('dpApply').onclick = () => {
+    PR = { preset: DP.preset, since: DP.since, until: DP.until };
+    amCompare = $('dpCmp').checked; LS.set('ao_cmp', amCompare); if ($('amCmp')) $('amCmp').checked = amCompare;
+    LS.set('ao_range', PR);
+    closeSheet(); renderPerf();
+  };
+  $('dpCmp').onchange = e => { DP.cmp = e.target.checked; };
+  const setDates = () => { let a = $('dpS').value, b = $('dpU').value; if (!a || !b) return; if (a > b) [a, b] = [b, a]; DP.since = a; DP.until = b; DP.preset = 'custom'; DP.picking = false; DP.view = b.slice(0, 7); drawDatePicker(); };
+  $('dpS').onchange = setDates; $('dpU').onchange = setDates;
+}
+function dpClick(t) {
+  const ds = t.dataset;
+  if (ds.dppre) {
+    DP.preset = ds.dppre;
+    const r = presetRange(ds.dppre); if (r) { DP.since = r[0]; DP.until = r[1]; DP.view = r[1].slice(0, 7); }
+    DP.picking = false; drawDatePicker(); return true;
+  }
+  if (ds.dpnav) { DP.view = shiftMonth(DP.view, +ds.dpnav); drawDatePicker(); return true; }
+  if (ds.dpday) {
+    const d = ds.dpday;
+    if (!DP.picking) { DP.since = d; DP.until = d; DP.picking = true; }
+    else { if (d < DP.since) { DP.until = DP.since; DP.since = d; } else DP.until = d; DP.picking = false; }
+    DP.preset = 'custom';
+    const hit = PRESETS.find(([p]) => { const r = presetRange(p); return r && r[0] === DP.since && r[1] === DP.until; });
+    if (hit && !DP.picking) DP.preset = hit[0];
+    drawDatePicker(); return true;
+  }
+  return false;
 }
 
 function renderCharts(K) {
@@ -1765,7 +1949,7 @@ function openEntity(lvl, id) {
     <div class="xs muted" style="margin-top:6px">CPR mục tiêu ${K ? vnd(K) : 'chưa đặt'} · xanh ≤ mục tiêu · vàng ≤ ${xf(S.cutX)} · đỏ vượt</div>
     ${budgetHtml}
     <div id="bdHost" class="card" style="margin-top:12px;background:var(--card2)">
-      <div class="row between wrapf" style="gap:8px"><b class="sm">🔍 Phân tích theo</b><div class="seg" style="min-width:200px"><button data-bdwin="today">Nay</button><button data-bdwin="yesterday">Qua</button><button data-bdwin="last3">3N</button><button data-bdwin="last7" class="on">7N</button></div></div>
+      <div class="row between wrapf" style="gap:8px"><b class="sm">🔍 Phân tích theo</b><div class="seg" style="min-width:230px"><button data-bdwin="cur" class="on">Kỳ đang xem</button><button data-bdwin="l7">7 ngày</button><button data-bdwin="l30">30 ngày</button></div></div>
       <div class="seg" style="margin-top:8px"><button data-bddim="age" class="on">Độ tuổi</button><button data-bddim="gender">Giới tính</button><button data-bddim="place">Vị trí</button></div>
       <div id="bdBox" style="margin-top:10px"></div>
     </div>
@@ -1905,15 +2089,15 @@ function switchTab(tab) {
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-cr],[data-crsort],[data-crgroup],[data-amall],[data-amsel],[data-amclr],[data-amtab],[data-amsort],[data-amtog],[data-amdrill],[data-act],[data-tab],[data-proj],[data-focus],[data-filter],[data-run],[data-snooze],[data-unsnooze],[data-undo],[data-open],[data-win],[data-lvl],[data-sel]');
+  const t = ev.target.closest('[data-dppre],[data-dpnav],[data-dpday],[data-cr],[data-crsort],[data-crgroup],[data-amall],[data-amsel],[data-amclr],[data-amtab],[data-amsort],[data-amtog],[data-amdrill],[data-act],[data-tab],[data-proj],[data-focus],[data-filter],[data-run],[data-snooze],[data-unsnooze],[data-undo],[data-open],[data-win],[data-lvl],[data-sel]');
   if (!t) { if (ev.target.id === 'ov') closeSheet(); return; }
   const ds = t.dataset;
+  if ((ds.dppre || ds.dpnav || ds.dpday) && dpClick(t)) return;
   if (ds.sel !== undefined) { if (t.checked) selected.add(ds.sel); else selected.delete(ds.sel); renderBulk(); return; }
   if (ds.tab) { closeSheet(); switchTab(ds.tab); return; }
   if (ds.proj) { currentProject = ds.proj; LS.set('ao_project', currentProject); selected.clear(); renderAll(); return; }
   if (ds.focus) { focusDay = ds.focus; selected.clear(); renderAll(); return; }
   if (ds.filter) { recFilter = recFilter === ds.filter ? 'all' : ds.filter; renderTodo(); return; }
-  if (ds.win) { perfWin = ds.win; renderPerf(); return; }
   if (ds.cr) { openCreative(ds.cr); return; }
   if (ds.crsort) { if (crSort.k === ds.crsort) crSort.d = -crSort.d; else crSort = { k: ds.crsort, d: ds.crsort === 'name' || ds.crsort === 'cpr' || ds.crsort === 'rank' ? 1 : -1 }; renderCreativeTable(); return; }
   if (ds.crgroup) { crGroup = ds.crgroup; LS.set('ao_crgroup', crGroup); renderCreativeTable(); return; }
@@ -1935,6 +2119,7 @@ document.addEventListener('click', ev => {
   }
   switch (ds.act) {
     case 'refresh': fetchAll(); break;
+    case 'datePicker': openDatePicker(); break;
     case 'copyReport': openReport(); break;
     case 'closeSheet': closeSheet(); break;
     case 'selectAll': RECS.filter(r => !r.snoozed && r.action && !doneMap[r.key] && (recFilter === 'all' || r.type === recFilter)).forEach(r => selected.add(r.key)); renderTodo(); renderBulk(); break;
@@ -1957,7 +2142,7 @@ document.addEventListener('click', ev => {
 $('perfSearch').addEventListener('input', e => { perfQuery = e.target.value.trim(); renderPerf(); });
 $('amFilter').addEventListener('change', e => { amFilter = e.target.value; renderAmTable(); });
 $('amCmp').checked = amCompare;
-$('amCmp').addEventListener('change', e => { amCompare = e.target.checked; LS.set('ao_cmp', amCompare); renderAmTable(); });
+$('amCmp').addEventListener('change', e => { amCompare = e.target.checked; LS.set('ao_cmp', amCompare); renderPerf(); });
 $('perfOverview').addEventListener('toggle', () => { if ($('perfOverview').open && D) renderCharts(scopeTarget().v); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
@@ -2092,7 +2277,7 @@ const DEMO = (() => {
         return out;
       }
       const days = daysFromRange(params.time_range);
-      allCamps.forEach(c => c.sets.forEach(st => days.forEach((day, di) => {
+      allCamps.forEach(c => c.sets.forEach(st => days.forEach((day) => { const di = Math.round((Date.parse(vnDayD(0)) - Date.parse(day)) / 864e5);
         const m = setDay(c, st, di, day); if (!m.s) return;
         if (params.level === 'adset') out.push(row(m, { adset_id: st.id, adset_name: st.name, campaign_id: c.id, campaign_name: c.name }, day));
         else {
