@@ -607,7 +607,7 @@ let S = loadSettings();
 
 const EVENTS = {
   complete_registration: { label: 'Hoàn tất đăng ký (website)', types: ['omni_complete_registration', 'offsite_conversion.fb_pixel_complete_registration', 'complete_registration'] },
-  lead: { label: 'Khách hàng tiềm năng (Lead)', types: ['lead', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead'] },
+  lead: { label: 'Khách hàng tiềm năng (Lead)', types: ['onsite_conversion.lead_grouped', 'leadgen', 'lead', 'offsite_conversion.fb_pixel_lead', 'onsite_conversion.leadgen_grouped'] },
   purchase: { label: 'Mua hàng', types: ['omni_purchase', 'purchase', 'offsite_conversion.fb_pixel_purchase'] },
   messages: { label: 'Bắt đầu nhắn tin', types: ['onsite_conversion.messaging_conversation_started_7d', 'messaging_conversation_started_7d', 'onsite_conversion.messaging_first_reply'] },
   post_engagement: { label: 'Tương tác bài viết', types: ['post_engagement', 'page_engagement', 'post_reaction'] },
@@ -615,6 +615,21 @@ const EVENTS = {
   link_click: { label: 'Click link (Outbound)', field: 'outbound_clicks', types: ['outbound_click'] },
   thruplay: { label: 'ThruPlay (xem trọn)', field: 'video_thruplay_watched_actions', types: ['video_view'] }
 };
+// Map objective của Meta → event key tự động
+const OBJECTIVE_EVENT = {
+  OUTCOME_LEADS: 'lead', LEAD_GENERATION: 'lead',
+  OUTCOME_SALES: 'complete_registration', CONVERSIONS: 'complete_registration',
+  OUTCOME_ENGAGEMENT: 'post_engagement', POST_ENGAGEMENT: 'post_engagement', PAGE_LIKES: 'post_engagement',
+  OUTCOME_TRAFFIC: 'link_click', LINK_CLICKS: 'link_click', TRAFFIC: 'link_click',
+  OUTCOME_AWARENESS: 'video_view', VIDEO_VIEWS: 'video_view', BRAND_AWARENESS: 'video_view', REACH: 'video_view',
+  OUTCOME_APP_PROMOTION: 'link_click', APP_INSTALLS: 'link_click',
+  MESSAGES: 'messages', OUTCOME_MESSAGES: 'messages'
+};
+function evForCampaign(campaignId, projEv, campStore) {
+  const c = (campStore || {})[campaignId];
+  if (c && c.objective) return OBJECTIVE_EVENT[c.objective] || projEv;
+  return projEv;
+}
 const PROJ_NAME = { GD: 'Dự án GD', AI: 'Dự án AI', TT: 'Dự án TT', ALL: 'Tất cả dự án' };
 
 // ---------- trạng thái ----------
@@ -784,12 +799,12 @@ async function fetchAccount(acc, days, store) {
   (insAs || []).forEach(it => {
     const id = it.adset_id; if (!id) return;
     const e = store.ins.adset[id] || (store.ins.adset[id] = Object.assign({}, base, { id, name: it.adset_name, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} }));
-    e.d[it.date_start] = parseRow(it, ev);
+    e.d[it.date_start] = parseRow(it, evForCampaign(it.campaign_id, ev, store.campaigns));
   });
   (insAd || []).forEach(it => {
     const id = it.ad_id; if (!id) return;
     const e = store.ins.ad[id] || (store.ins.ad[id] = Object.assign({}, base, { id, name: it.ad_name, adsetId: it.adset_id, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} }));
-    e.d[it.date_start] = parseRow(it, ev);
+    e.d[it.date_start] = parseRow(it, evForCampaign(it.campaign_id, ev, store.campaigns));
   });
   (f7as || []).forEach(it => { store.f7.adset[it.adset_id] = { reach: +it.reach || 0, freq: +it.frequency || 0 }; });
   (f7ad || []).forEach(it => { store.f7.ad[it.ad_id] = { reach: +it.reach || 0, freq: +it.frequency || 0 }; });
@@ -1827,8 +1842,8 @@ async function ensureRange() {
             gget(acc.id + '/insights', Object.assign({ level: 'adset', time_range: tr, fields: 'adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions', limit: 500 }, attrParams())),
             gget(acc.id + '/insights', Object.assign({ level: 'ad', time_range: tr, fields: 'ad_id,ad_name,adset_id,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions', limit: 500 }, attrParams()))
           ]);
-          (as || []).forEach(it => { const e = D.ins.adset[it.adset_id] || (D.ins.adset[it.adset_id] = Object.assign({}, base, { id: it.adset_id, name: it.adset_name, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} })); e.d[key] = addInto(e.d[key] || emptyM(), parseRow(it, ev)); });
-          (ad || []).forEach(it => { const e = D.ins.ad[it.ad_id] || (D.ins.ad[it.ad_id] = Object.assign({}, base, { id: it.ad_id, name: it.ad_name, adsetId: it.adset_id, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} })); e.d[key] = addInto(e.d[key] || emptyM(), parseRow(it, ev)); });
+          (as || []).forEach(it => { const e = D.ins.adset[it.adset_id] || (D.ins.adset[it.adset_id] = Object.assign({}, base, { id: it.adset_id, name: it.adset_name, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} })); e.d[key] = addInto(e.d[key] || emptyM(), parseRow(it, evForCampaign(it.campaign_id, ev, D.campaigns))); });
+          (ad || []).forEach(it => { const e = D.ins.ad[it.ad_id] || (D.ins.ad[it.ad_id] = Object.assign({}, base, { id: it.ad_id, name: it.ad_name, adsetId: it.adset_id, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} })); e.d[key] = addInto(e.d[key] || emptyM(), parseRow(it, evForCampaign(it.campaign_id, ev, D.campaigns))); });
         }
       };
       await Promise.all([worker(), worker(), worker(), worker()]);
