@@ -609,7 +609,11 @@ const EVENTS = {
   complete_registration: { label: 'Hoàn tất đăng ký (website)', types: ['omni_complete_registration', 'offsite_conversion.fb_pixel_complete_registration', 'complete_registration'] },
   lead: { label: 'Khách hàng tiềm năng (Lead)', types: ['lead', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead'] },
   purchase: { label: 'Mua hàng', types: ['omni_purchase', 'purchase', 'offsite_conversion.fb_pixel_purchase'] },
-  messages: { label: 'Bắt đầu nhắn tin', types: ['onsite_conversion.messaging_conversation_started_7d'] }
+  messages: { label: 'Bắt đầu nhắn tin', types: ['onsite_conversion.messaging_conversation_started_7d', 'messaging_conversation_started_7d', 'onsite_conversion.messaging_first_reply'] },
+  post_engagement: { label: 'Tương tác bài viết', types: ['post_engagement', 'page_engagement', 'post_reaction'] },
+  video_view: { label: 'Xem video (3 giây)', types: ['video_view'] },
+  link_click: { label: 'Click link (Outbound)', field: 'outbound_clicks', types: ['outbound_click'] },
+  thruplay: { label: 'ThruPlay (xem trọn)', field: 'video_thruplay_watched_actions', types: ['video_view'] }
 };
 const PROJ_NAME = { GD: 'Dự án GD', AI: 'Dự án AI', TT: 'Dự án TT', ALL: 'Tất cả dự án' };
 
@@ -718,10 +722,15 @@ function attrParams() {
   if (S.attribution === 'default') return { use_unified_attribution_setting: 'true' };
   return { action_attribution_windows: JSON.stringify([S.attribution]) };
 }
-function pickResult(actions, evKey) {
+function pickResult(actions, evKey, row) {
+  const ev = EVENTS[evKey] || EVENTS.complete_registration;
+  // event có field riêng ngoài actions (outbound_clicks, video_thruplay...)
+  if (ev.field && row) {
+    const arr = row[ev.field];
+    if (arr) return sumAct(Array.isArray(arr) ? arr : [{ action_type: ev.types[0], value: arr }], ev.types[0]);
+  }
   if (!actions) return 0;
-  const types = (EVENTS[evKey] || EVENTS.complete_registration).types;
-  for (const t of types) {
+  for (const t of ev.types) {
     const a = actions.find(x => x.action_type === t);
     if (a) { const v = (S.attribution !== 'default' && a[S.attribution] != null) ? a[S.attribution] : a.value; return parseFloat(v) || 0; }
   }
@@ -729,7 +738,9 @@ function pickResult(actions, evKey) {
 }
 function sumAct(arr, type) { if (!arr) return 0; return arr.reduce((s, x) => s + ((!type || x.action_type === type) ? (parseFloat(x.value) || 0) : 0), 0); }
 function parseRow(it, evKey) {
-  const row = { s: parseFloat(it.spend || 0), r: pickResult(it.actions, evKey), lc: parseInt(it.inline_link_clicks || 0), imp: parseInt(it.impressions || 0), clk: parseInt(it.clicks || 0) };
+  const row = { s: parseFloat(it.spend || 0), lc: parseInt(it.inline_link_clicks || 0), imp: parseInt(it.impressions || 0), clk: parseInt(it.clicks || 0),
+    outbound_clicks: it.outbound_clicks, video_thruplay_watched_actions: it.video_thruplay_watched_actions };
+  row.r = pickResult(it.actions, evKey, row);
   const v3 = sumAct(it.actions, 'video_view');
   if (v3 || it.video_thruplay_watched_actions) {
     row.v3 = v3; row.tp = sumAct(it.video_thruplay_watched_actions, 'video_view');
@@ -747,8 +758,8 @@ async function fetchAccount(acc, days, store) {
     gget(acc.id + '/campaigns', { effective_status: '["ACTIVE"]', fields: 'id,name,daily_budget,lifetime_budget,objective,bid_strategy', limit: 500 }).catch(() => []),
     gget(acc.id + '/adsets', { effective_status: '["ACTIVE"]', fields: 'id,name,daily_budget,lifetime_budget,bid_strategy,learning_stage_info,campaign{id,name,daily_budget,lifetime_budget,objective}', limit: 500 }),
     gget(acc.id + '/ads', { effective_status: '["ACTIVE","PENDING_REVIEW","DISAPPROVED","WITH_ISSUES","IN_PROCESS","PREAPPROVED"]', fields: 'id,name,adset_id,campaign_id,effective_status,creative{id,thumbnail_url,effective_object_story_id,instagram_permalink_url,image_hash,video_id,object_type}', limit: 500 }),
-    gget(acc.id + '/insights', Object.assign({ level: 'adset', fields: 'adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,actions' }, insBase)),
-    gget(acc.id + '/insights', Object.assign({ level: 'ad', fields: 'ad_id,ad_name,adset_id,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions' }, insBase)),
+    gget(acc.id + '/insights', Object.assign({ level: 'adset', fields: 'adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions' }, insBase)),
+    gget(acc.id + '/insights', Object.assign({ level: 'ad', fields: 'ad_id,ad_name,adset_id,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions' }, insBase)),
     gget(acc.id + '/insights', { level: 'adset', date_preset: 'last_7d', fields: 'adset_id,reach,frequency', limit: 500 }).catch(() => []),
     gget(acc.id + '/insights', { level: 'ad', date_preset: 'last_7d', fields: 'ad_id,reach,frequency', limit: 500 }).catch(() => [])
   ]);
@@ -1693,7 +1704,7 @@ async function loadBreakdown(ent, win, kind) {
   if (BD_CACHE[key]) return BD_CACHE[key];
   const tr = JSON.stringify({ since, until });
   const breakdowns = kind === 'place' ? 'publisher_platform,platform_position' : 'age,gender';
-  const rows = await gget(ent.id + '/insights', Object.assign({ time_range: tr, breakdowns, fields: 'spend,impressions,clicks,inline_link_clicks,actions', limit: 500 }, attrParams()));
+  const rows = await gget(ent.id + '/insights', Object.assign({ time_range: tr, breakdowns, fields: 'spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions,video_thruplay_watched_actions', limit: 500 }, attrParams()));
   const ev = S.events[ent.project] || 'complete_registration';
   const out = { age: {}, gender: {}, place: {} };
   (rows || []).forEach(it => {
@@ -1813,8 +1824,8 @@ async function ensureRange() {
           const acc = q.shift(); const ev = S.events[acc.project] || 'complete_registration';
           const base = { accId: acc.id, accName: acc.name, project: acc.project };
           const [as, ad] = await Promise.all([
-            gget(acc.id + '/insights', Object.assign({ level: 'adset', time_range: tr, fields: 'adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,actions', limit: 500 }, attrParams())),
-            gget(acc.id + '/insights', Object.assign({ level: 'ad', time_range: tr, fields: 'ad_id,ad_name,adset_id,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions', limit: 500 }, attrParams()))
+            gget(acc.id + '/insights', Object.assign({ level: 'adset', time_range: tr, fields: 'adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions', limit: 500 }, attrParams())),
+            gget(acc.id + '/insights', Object.assign({ level: 'ad', time_range: tr, fields: 'ad_id,ad_name,adset_id,campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions', limit: 500 }, attrParams()))
           ]);
           (as || []).forEach(it => { const e = D.ins.adset[it.adset_id] || (D.ins.adset[it.adset_id] = Object.assign({}, base, { id: it.adset_id, name: it.adset_name, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} })); e.d[key] = addInto(e.d[key] || emptyM(), parseRow(it, ev)); });
           (ad || []).forEach(it => { const e = D.ins.ad[it.ad_id] || (D.ins.ad[it.ad_id] = Object.assign({}, base, { id: it.ad_id, name: it.ad_name, adsetId: it.adset_id, campaignId: it.campaign_id, campaignName: it.campaign_name, d: {} })); e.d[key] = addInto(e.d[key] || emptyM(), parseRow(it, ev)); });
