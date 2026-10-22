@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Ads Optimizer — GD, AI &amp; TT</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{
   --background:#0b1220; --foreground:#f1f5f9; --card:#131c2e; --card2:#18233a; --border:#26334d;
@@ -200,10 +200,56 @@ span.dt{display:inline}
 .bdtips{margin:0 0 10px;padding-left:4px;list-style:none;font-size:12.5px;line-height:1.5}.bdtips li{margin:4px 0}.bdtips li.good{color:#a7f3d0}.bdtips li.bad{color:#fecdd3}
 .fchip{display:inline-flex;align-items:center;gap:6px;background:rgba(24,119,242,.15);border:1px solid rgba(24,119,242,.45);color:#bcd6ff;border-radius:99px;padding:4px 10px;font-size:12px;font-weight:600}
 .fchip button{color:#bcd6ff;font-size:13px;padding:0}
-@media(max-width:600px){table.am th.nm,table.am td.nm{min-width:140px;max-width:160px}table.am th,table.am td{padding:8px 6px}.amname{gap:5px}.amtabs .long{display:none}.sw{width:30px;height:18px}.sw::after{width:14px;height:14px}.sw.on::after{transform:translateX(12px)}}
-@media(max-width:380px){table.am th.nm,table.am td.nm{min-width:120px;max-width:140px}}
+@media(max-width:600px){
+  table.am th.nm,table.am td.nm{min-width:190px;max-width:220px}
+  table.am th,table.am td{padding:8px 6px}
+  .amname{gap:5px}
+  /* hide checkbox & thumbnail inside table rows on mobile to give name more room */
+  table.am td.nm .amname .chk{display:none}
+  table.am td.nm .amname .thumb{display:none}
+  /* make name text show 2 lines so it's readable */
+  .amname a,.amname .lk{-webkit-line-clamp:2!important;font-size:13px}
+  .amtabs .long{display:none}
+  .sw{width:30px;height:18px}.sw::after{width:14px;height:14px}.sw.on::after{transform:translateX(12px)}
+  /* quick-date presets: wrap to second line on mobile */
+  .qdbar{padding:6px 0 2px}
+}
+@media(max-width:380px){table.am th.nm,table.am td.nm{min-width:160px;max-width:190px}}
 @media(min-width:601px){.amtabs .short{display:none}}
 body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
+
+/* ===== Quick date preset bar ===== */
+.qdbar{display:flex;gap:5px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.qdbar::-webkit-scrollbar{display:none}
+.qd{padding:5px 11px;border-radius:8px;border:1px solid var(--border);background:var(--secondary);font-size:12px;font-weight:600;color:var(--muted-foreground);white-space:nowrap;flex:none}
+.qd:active{transform:scale(.96)}
+.qd.on{background:rgba(24,119,242,.18);border-color:rgba(24,119,242,.5);color:#7fb2ff}
+
+/* ===== Budget pacing ===== */
+.pace{margin-top:4px;min-width:96px}
+.pace .pb{position:relative;height:5px;border-radius:99px;background:var(--secondary)}
+.pace .pb>i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;max-width:100%}
+.pace .pb>u{position:absolute;top:-2px;bottom:-2px;width:2px;background:#e2e8f0;border-radius:2px;opacity:.8}
+.pace .pl{font-size:10.5px;font-weight:700;margin-top:3px;white-space:nowrap}
+.pace.ok .pb>i{background:var(--scale)} .pace.ok .pl{color:var(--scale)}
+.pace.slow .pb>i{background:var(--cut)} .pace.slow .pl{color:var(--cut)}
+.pace.stuck .pb>i{background:var(--kill)} .pace.stuck .pl{color:var(--kill)}
+.pace.fast .pb>i{background:#60a5fa} .pace.fast .pl{color:#93c5fd}
+.pace.cap .pb>i{background:#a78bfa} .pace.cap .pl{color:#c4b5fd}
+.pacesum{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.pacesum button{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;border:1px solid var(--border);background:var(--card)}
+.pacesum button.on{outline:2px solid currentColor;outline-offset:1px}
+/* ===== Bulk budget sheet ===== */
+.bbchips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.bbchips button{padding:9px 0;border-radius:10px;border:1px solid var(--border);background:var(--secondary);font-weight:800;font-size:13px}
+.bbchips button.dn{color:var(--kill)} .bbchips button.up{color:var(--scale)}
+.bbchips button.on{background:var(--blue-strong);border-color:var(--blue-strong);color:#fff}
+.bbrow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.bbrow:last-child{border-bottom:0}
+
+/* ===== Auto-refresh badge ===== */
+.arbadge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:8px;border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.1);font-size:11px;font-weight:700;color:#34d399;cursor:pointer}
+.arbadge.off{border-color:var(--border);background:transparent;color:var(--faint)}
 
 /* ===== Bộ chọn thời gian ===== */
 .datebtn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;border:1px solid var(--border);background:var(--card);text-align:left;min-width:0}
@@ -261,15 +307,26 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
       <span id="focusNote" class="xs muted" style="text-align:right"></span>
     </div>
     <div id="healthCard"></div>
+    <div id="planBox"></div>
     <div id="chipsBox" style="margin-top:12px"></div>
     <div id="recList" style="margin-top:12px"></div>
+    <div id="fatigueBox"></div>
     <div id="okBox"></div>
   </section>
 
   <!-- ===================== TAB: HIỆU SUẤT ===================== -->
   <section id="v-perf" class="hidden">
-    <div class="row wrapf" style="gap:8px;margin:4px 0 10px">
+    <div class="row wrapf" style="gap:8px;margin:4px 0 4px">
       <button class="datebtn grow" data-act="datePicker"><span>📅</span><span class="grow" style="text-align:left;min-width:0"><b id="dateLbl" class="trunc" style="display:block">Hôm nay</b><span id="dateCmp" class="xs muted trunc" style="display:block"></span></span><span class="muted">▾</span></button>
+      <button id="arBtn" class="arbadge off" data-act="toggleAutoRefresh" title="Tự động làm mới dữ liệu">⏱ Tắt</button>
+    </div>
+    <div class="qdbar" id="qdBar">
+      <button class="qd" data-qdpreset="today">Hôm nay</button>
+      <button class="qd" data-qdpreset="yesterday">Hôm qua</button>
+      <button class="qd" data-qdpreset="last_7d">7 ngày qua</button>
+      <button class="qd" data-qdpreset="last_14d">14 ngày qua</button>
+      <button class="qd" data-qdpreset="this_month">Tháng này</button>
+      <button class="qd" data-qdpreset="last_30d">30 ngày qua</button>
     </div>
     <details id="perfOverview" class="card" style="padding:10px 12px">
       <summary class="row between"><b class="sm">📈 Tổng quan &amp; biểu đồ 8 ngày</b><span id="ovMini" class="xs muted"></span></summary>
@@ -284,12 +341,18 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
     <div class="amtool">
       <input id="perfSearch" class="field grow" placeholder="🔍 Tìm kiếm theo tên…" autocomplete="off">
       <select id="amFilter" class="field" style="width:auto">
-        <option value="onspent">Đang bật / có chi tiêu</option><option value="on">Chỉ đang bật</option><option value="all">Tất cả</option>
+        <option value="onspent">Đang bật / có chi tiêu</option><option value="on">Chỉ đang bật</option><option value="all">Tất cả</option><option value="pace_slow">⏱ Tiêu chậm (hôm nay)</option><option value="pace_fast">⏱ Tiêu nhanh / sắp hết NS</option>
       </select>
       <label class="row xs b" style="gap:6px;white-space:nowrap;padding:0 4px"><input type="checkbox" id="amCmp" class="chk" style="width:16px;height:16px" checked> So sánh kỳ trước</label>
     </div>
     <div id="amChips" class="row wrapf" style="gap:6px;margin:0 0 8px"></div>
     <div id="crNote" class="xs muted hidden" style="margin:0 2px 8px;line-height:1.5"></div>
+    <div id="paceSum" class="pacesum"></div>
+    <div id="amToolExtra" class="row wrapf" style="gap:6px;margin:0 0 6px">
+      <button class="btn xs" data-act="exportCSV">⬇ Xuất CSV</button>
+      <button class="btn xs" data-act="copyTSV">📋 Copy dán Google Sheet</button>
+      <button class="btn xs" data-act="openHW">🕐 Giờ & Thứ</button>
+    </div>
     <div id="amTable" class="amwrap"></div>
     <div class="xs muted" style="margin:8px 2px">Bấm <b>tên</b> để xem cấp bên trong · bấm <b>📊 Chi tiết</b> để xem 4 mốc thời gian · bấm <b>ngân sách</b> để sửa · kéo ngang để xem thêm cột.</div>
   </section>
@@ -302,7 +365,7 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
   </section>
 
   <!-- ===================== TAB: POWER BI (giữ nguyên từ bản cũ) ===================== -->
-  <div id="pbiWrap" class="hidden">
+  <div id="pbiWrap" class="hidden" data-pbi-ready="0">
     <section id="view-powerbi" class="space-y-4 fade-in">
       
       <!-- HEADER BANNER -->
@@ -606,7 +669,8 @@ function loadSettings() {
   if (!s.gdTarget130) { s.targets = Object.assign({}, s.targets || {}, { GD: 130000 }); s.gdTarget130 = true; LS.set('ao_settings', s); }
   return Object.assign({}, DEFAULT_SETTINGS, s, {
     targets: Object.assign({}, DEFAULT_SETTINGS.targets, s.targets || {}),
-    events: Object.assign({}, DEFAULT_SETTINGS.events, s.events || {})
+    events: Object.assign({}, DEFAULT_SETTINGS.events, s.events || {}),
+    plan: Object.assign({ GD: {}, AI: {}, TT: {} }, s.plan || {})
   });
 }
 let S = loadSettings();
@@ -644,6 +708,10 @@ let currentTab = 'todo';
 let focusDay = null;          // 'today' | 'yesterday'
 let perfWin = 'today', perfLvl = 'campaign', perfSortKey = 's', perfQuery = '', perfActiveOnly = true;
 let recFilter = 'all';
+let recSort = 'priority'; // 'priority' | 'spend' | 'cpr'
+let autoRefreshInterval = 0;   // minutes; 0 = off
+let autoRefreshTimer = null;
+let activeQdPreset = null;     // which quick-date preset is selected
 let D = null;                 // dữ liệu đã chuẩn hoá
 let RECS = [], OKS = [];
 let selected = new Set();
@@ -651,6 +719,298 @@ let doneMap = {};             // recKey -> log id
 let isFetching = false;
 let demoMode = false;
 let lastError = '';
+
+// =====================================================================
+//  v7: CREATIVE MỆT · KẾ HOẠCH THÁNG · HIỆU QUẢ THEO GIỜ & THỨ
+// =====================================================================
+const EXT = { stamp: '', daily: null, dailyState: '', dailyErr: '', hourly: null, hourlyState: '', hourlyErr: '', tz: [] };
+const CAMP_FIELDS = 'campaign_id,spend,impressions,clicks,inline_link_clicks,outbound_clicks,actions';
+const GMT7 = ['Asia/Ho_Chi_Minh', 'Asia/Saigon', 'Asia/Bangkok', 'Asia/Jakarta', 'Asia/Phnom_Penh', 'Asia/Vientiane'];
+function extStamp() { return D ? D.fetchedAt + '|' + S.attribution + '|' + JSON.stringify(S.events) + '|' + (D.demo ? 1 : 0) : ''; }
+function extReset() { const st = extStamp(); if (EXT.stamp !== st) { EXT.stamp = st; EXT.daily = EXT.hourly = null; EXT.dailyState = EXT.hourlyState = ''; EXT.dailyErr = EXT.hourlyErr = ''; EXT.tz = []; } }
+function extRange() { const t = vnDay(0), m1 = t.slice(0, 8) + '01', a = addDays(t, -28); return [m1 < a ? m1 : a, t]; }
+async function eachAccount(fn) {
+  const q = D.accounts.slice(), errs = [];
+  const worker = async () => { while (q.length) { const acc = q.shift(); try { await fn(acc); } catch (e) { if (e.code === 190) throw e; errs.push(acc.name + ': ' + e.message); } } };
+  await Promise.all([worker(), worker(), worker()]);
+  return errs;
+}
+// Số liệu theo ngày cấp chiến dịch: từ đầu tháng (hoặc 28 ngày, lấy mốc xa hơn) tới hôm nay
+async function loadExtDaily() {
+  extReset(); if (!D || EXT.dailyState) return;
+  EXT.dailyState = 'loading'; const stamp = EXT.stamp;
+  const [a, b] = extRange(); const tr = JSON.stringify({ since: a, until: b });
+  const out = { GD: {}, AI: {}, TT: {} };
+  try {
+    const errs = await eachAccount(async acc => {
+      const ev = S.events[acc.project] || 'complete_registration';
+      const rows = await gget(acc.id + '/insights', Object.assign({ level: 'campaign', time_range: tr, time_increment: 1, fields: CAMP_FIELDS, limit: 500 }, attrParams()), 40);
+      (rows || []).forEach(it => { const P = out[acc.project]; if (!P || !it.date_start) return; P[it.date_start] = addInto(P[it.date_start] || emptyM(), parseRow(it, evForCampaign(it.campaign_id, ev, D.campaigns))); });
+    });
+    if (stamp !== EXT.stamp) return;
+    EXT.daily = out; EXT.dailyState = 'ok'; EXT.dailyErr = errs.join(' · ');
+  } catch (e) { if (stamp !== EXT.stamp) return; EXT.dailyState = 'err'; EXT.dailyErr = e.message; }
+  renderPlan(); if ($('hwBox')) drawHW();
+}
+// Số liệu theo giờ trong ngày, 14 ngày gần nhất (không tính hôm nay)
+async function loadExtHourly() {
+  extReset(); if (!D || EXT.hourlyState) return;
+  EXT.hourlyState = 'loading'; const stamp = EXT.stamp;
+  const t = vnDay(0); const tr = JSON.stringify({ since: addDays(t, -14), until: addDays(t, -1) });
+  const mk = () => Array.from({ length: 24 }, () => emptyM());
+  const out = { GD: mk(), AI: mk(), TT: mk() }; const tz = new Set();
+  try {
+    const errs = await eachAccount(async acc => {
+      if (acc.timezone_name && !GMT7.includes(acc.timezone_name)) tz.add(acc.name + ' (' + acc.timezone_name + ')');
+      const ev = S.events[acc.project] || 'complete_registration';
+      const rows = await gget(acc.id + '/insights', Object.assign({ level: 'campaign', time_range: tr, breakdowns: 'hourly_stats_aggregated_by_advertiser_time_zone', fields: CAMP_FIELDS, limit: 500 }, attrParams()), 40);
+      (rows || []).forEach(it => {
+        const h = parseInt(String(it.hourly_stats_aggregated_by_advertiser_time_zone || '').slice(0, 2), 10);
+        const P = out[acc.project]; if (!P || !(h >= 0 && h < 24)) return;
+        addInto(P[h], parseRow(it, evForCampaign(it.campaign_id, ev, D.campaigns)));
+      });
+    });
+    if (stamp !== EXT.stamp) return;
+    EXT.hourly = out; EXT.hourlyState = 'ok'; EXT.hourlyErr = errs.join(' · '); EXT.tz = [...tz];
+  } catch (e) { if (stamp !== EXT.stamp) return; EXT.hourlyState = 'err'; EXT.hourlyErr = e.message; }
+  if ($('hwBox')) drawHW();
+}
+
+// ---------- (2) PHÁT HIỆN CREATIVE MỆT ----------
+// So 3 ngày gần nhất (hôm qua → 3 ngày trước) với 7 ngày trước đó, gom theo cùng hình/video như tab Creative
+function fatigueList() {
+  if (!D || !D.days || D.days.length < 11) return [];
+  const RC = D.days.slice(1, 4), BL = D.days.slice(4, 11), SP = D.days.slice(1, 11).reverse();
+  const groups = {};
+  Object.keys(D.ins.ad).forEach(id => {
+    const ins = D.ins.ad[id], live = D.ads[id];
+    if (!live || !live.active || !adOn(id) || !inScope(ins.project)) return;
+    if (live.adsetId && D.adsets[live.adsetId] && D.adsets[live.adsetId].active === false) return;
+    const key = creativeKey(id);
+    const g = groups[key] || (groups[key] = { key, ids: [], adsets: new Set(), accs: new Set(), rc: emptyM(), bl: emptyM(), sp: SP.map(() => emptyM()), freq: 0, thumb: '', name: '', top: id, topS: -1, project: ins.project, video: false });
+    g.ids.push(id); if (live.adsetId) g.adsets.add(live.adsetId); g.accs.add(ins.accName);
+    RC.forEach(d => addInto(g.rc, ins.d[d])); BL.forEach(d => addInto(g.bl, ins.d[d])); SP.forEach((d, i) => addInto(g.sp[i], ins.d[d]));
+    const f = (D.f7.ad[id] || {}).freq || 0; if (f > g.freq) g.freq = f;
+    if (live.thumb && !g.thumb) g.thumb = live.thumb;
+    if (live.video || live.otype === 'VIDEO') g.video = true;
+    const s3 = agg(ins, RC).s; if (s3 > g.topS) { g.topS = s3; g.name = live.name || ins.name || id; g.top = id; }
+  });
+  const out = [];
+  Object.values(groups).forEach(g => {
+    fin(g.rc); fin(g.bl); g.sp.forEach(fin);
+    if (g.bl.imp < 3000 || g.rc.imp < 1500 || !g.bl.ctrL) return;
+    const ctrDrop = 1 - g.rc.ctrL / g.bl.ctrL;
+    const cpmUp = g.bl.cpm ? g.rc.cpm / g.bl.cpm - 1 : 0;
+    let cprUp = null;
+    if (g.rc.r >= 2 && g.bl.r >= 2) cprUp = g.rc.cpr / g.bl.cpr - 1;
+    else if (g.rc.r === 0 && g.bl.r >= 2 && g.rc.s >= g.bl.cpr * 1.5) cprUp = 1;
+    const fHi = g.freq >= S.freqMax - 0.5;
+    let lvl = null;
+    if ((ctrDrop >= 0.2 && (cpmUp >= 0.2 || (cprUp != null && cprUp >= 0.25) || fHi)) || ctrDrop >= 0.35) lvl = 'tired';
+    else if (ctrDrop >= 0.15 || (fHi && ctrDrop >= 0.08) || (cprUp != null && cprUp >= 0.4 && ctrDrop >= 0.08)) lvl = 'soon';
+    if (!lvl) return;
+    const sig = [];
+    if (ctrDrop >= 0.05) sig.push({ t: `CTR ${pct(g.bl.ctrL)} → ${pct(g.rc.ctrL)}`, v: '−' + Math.round(ctrDrop * 100) + '%', bad: ctrDrop >= 0.2 });
+    if (cpmUp >= 0.1) sig.push({ t: 'CPM ' + k(g.bl.cpm) + ' → ' + k(g.rc.cpm), v: '+' + Math.round(cpmUp * 100) + '%', bad: cpmUp >= 0.25 });
+    if (cprUp != null && cprUp >= 0.15) sig.push({ t: g.rc.r ? 'CPR ' + k(g.bl.cpr) + ' → ' + k(g.rc.cpr) : 'CPR ' + k(g.bl.cpr) + ' → 0 KQ', v: g.rc.r ? '+' + Math.round(cprUp * 100) + '%' : '', bad: cprUp >= 0.35 });
+    if (fHi) sig.push({ t: 'Tần suất 7N ' + g.freq.toFixed(1).replace('.', ','), v: '', bad: g.freq >= S.freqMax });
+    out.push(Object.assign(g, { lvl, sig, ctrDrop, cpmUp, cprUp }));
+  });
+  out.sort((a, b) => (a.lvl === b.lvl ? 0 : a.lvl === 'tired' ? -1 : 1) || b.rc.s - a.rc.s);
+  return out;
+}
+function sparkCtr(sp) {
+  const v = sp.map(m => m.imp >= 200 ? m.ctrL : null); const xs = v.filter(x => x != null); if (xs.length < 3) return '';
+  const mx = Math.max(...xs), mn = Math.min(...xs), W = 70, H = 24, n = v.length;
+  const pts = v.map((y, i) => y == null ? null : [i / (n - 1) * W, H - 3 - (mx === mn ? 0.5 : (y - mn) / (mx - mn)) * (H - 6)]).filter(Boolean);
+  const L = pts[pts.length - 1];
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible"><polyline fill="none" stroke="#93a0b8" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"/><circle cx="${L[0].toFixed(1)}" cy="${L[1].toFixed(1)}" r="2.5" fill="#fb7185"/></svg>`;
+}
+let FAT = [];
+function renderFatigue() {
+  const box = $('fatigueBox'); if (!box) return;
+  FAT = D ? fatigueList() : [];
+  if (!FAT.length) { box.innerHTML = ''; return; }
+  const nT = FAT.filter(g => g.lvl === 'tired').length, nS = FAT.length - nT;
+  const open = LS.get('ao_fat_open', true);
+  box.innerHTML = `<details class="card" id="fatDet" style="margin-top:12px;padding:12px" ${open ? 'open' : ''}>
+    <summary class="row between" style="gap:8px"><b class="sm">🎨 Creative cần làm mới</b><span class="row" style="gap:4px">${nT ? `<span class="tag kill">${nT} mệt</span>` : ''}${nS ? `<span class="tag cut">${nS} sắp mệt</span>` : ''}<span class="muted">▾</span></span></summary>
+    <div class="hint" style="margin:6px 0 2px">So 3 ngày gần nhất với 7 ngày trước đó. CTR giảm kèm CPM hoặc tần suất tăng nghĩa là khách đã chán mẫu này. Nên đưa mẫu mới vào <b>cùng nhóm</b> trước khi CPR tăng vọt.</div>
+    ${FAT.slice(0, 12).map(fatRow).join('')}
+    ${FAT.length > 12 ? `<div class="xs muted" style="margin-top:6px">+${FAT.length - 12} creative khác</div>` : ''}
+    <div class="acts"><button class="btn xs" data-act="copyFatigue">📋 Copy danh sách gửi designer</button></div></details>`;
+  const det = $('fatDet'); if (det) det.addEventListener('toggle', () => LS.set('ao_fat_open', det.open));
+}
+function fatRow(g) {
+  const ph = `<div class="thumb ph">${g.video ? '🎬' : '🖼️'}</div>`;
+  const th = g.thumb ? `<img class="thumb" src="${esc(g.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;thumb ph&quot;>${g.video ? '🎬' : '🖼️'}</div>'">` : ph;
+  return `<div class="row" data-open="ad:${esc(g.top)}" style="padding:10px 0 8px;border-top:1px solid var(--border);margin-top:6px;align-items:flex-start;gap:10px;cursor:pointer">${th}
+    <div class="grow"><div class="row" style="gap:6px"><span class="tag ${g.lvl === 'tired' ? 'kill' : 'cut'}" style="font-size:10px;padding:2px 6px;flex:none">${g.lvl === 'tired' ? 'MỆT' : 'SẮP MỆT'}</span><span class="sm b trunc">${esc(g.name)}</span></div>
+      <div class="xs" style="margin-top:4px;line-height:1.55">${g.sig.map(s => `<span class="${s.bad ? 'bad' : 'warn'}">${esc(s.t)}${s.v ? ' (' + s.v + ')' : ''}</span>`).join('<span class="faint"> · </span>')}</div>
+      <div class="xs faint" style="margin-top:2px">${g.ids.length} QC · ${g.adsets.size} nhóm · 3 ngày tiêu ${k(g.rc.s)} · ${esc([...g.accs].join(', '))}</div></div>
+    <div style="text-align:right;flex:none">${sparkCtr(g.sp)}<div class="xs faint" style="margin-top:2px">CTR 10N</div></div></div>`;
+}
+async function copyFatigue() {
+  if (!FAT.length) return;
+  const txt = `🎨 CREATIVE CẦN LÀM MỚI — ${PROJ_NAME[currentProject]} (${ddmm(vnDay(0))})\n`
+    + FAT.map((g, i) => `${i + 1}. [${g.lvl === 'tired' ? 'Mệt' : 'Sắp mệt'}] ${g.name}${g.video ? ' (video)' : ' (ảnh)'} — ${g.sig.map(s => s.t + (s.v ? ' ' + s.v : '')).join(', ')} · đang chạy ${g.ids.length} QC`).join('\n')
+    + '\n\n→ Cần mẫu mới cùng thông điệp/ưu đãi, đổi hook mở đầu và hình chính.';
+  try { await navigator.clipboard.writeText(txt); } catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast('✓ Đã copy danh sách — dán vào nhóm chat với designer', 'ok');
+}
+
+// ---------- (4) KẾ HOẠCH NGÂN SÁCH THÁNG + DỰ BÁO ----------
+function planOf(p) { const x = (S.plan || {})[p] || {}; return { b: +x.b || 0, r: +x.r || 0 }; }
+function monthInfo() { const t = vnDay(0); const y = +t.slice(0, 4), mo = +t.slice(5, 7), dom = +t.slice(8, 10); return { t, m1: t.slice(0, 8) + '01', dom, mo, dim: new Date(Date.UTC(y, mo, 0)).getUTCDate() }; }
+function planCalc(p) {
+  const P = planOf(p); if (!P.b && !P.r) return null;
+  const M = monthInfo();
+  const yd = addDays(M.t, -1);
+  const full = M.dom > 1 ? datesBetween(M.m1, yd) : [];
+  let mtdFull;
+  if (!full.length) mtdFull = fin(emptyM());
+  else if (covered(M.m1, yd)) mtdFull = projAgg(p, full);
+  else if (EXT.dailyState === 'ok') { mtdFull = emptyM(); full.forEach(d => addInto(mtdFull, EXT.daily[p][d])); fin(mtdFull); }
+  else if (EXT.dailyState === 'err') return { err: true, P, M };
+  else return { loading: true, P, M };
+  const today = D.days[0] === M.t ? projAgg(p, [M.t]) : fin(emptyM());
+  const mtd = fin(addInto(addInto(emptyM(), mtdFull), today));
+  const ef = expectedFrac();
+  const a7 = projAgg(p, D.days.slice(1, 8));
+  const remDays = M.dim - M.dom + 1;                          // số ngày còn lại, tính cả hôm nay
+  const remTime = Math.max(0.3, M.dim - (M.dom - 1) - ef);     // thời gian thực còn lại (ngày)
+  const fS = mtdFull.s + remDays * a7.s / 7, fR = mtdFull.r + remDays * a7.r / 7;
+  return { P, M, mtd, a7, fS, fR, remTime, elapsed: (M.dom - 1 + ef) / M.dim,
+    needS: P.b ? Math.max(0, P.b - mtd.s) / remTime : 0, needR: P.r ? Math.max(0, P.r - mtd.r) / remTime : 0,
+    allowCpr: P.b && P.r && P.r > mtd.r ? Math.max(0, P.b - mtd.s) / (P.r - mtd.r) : 0 };
+}
+function renderPlan() {
+  const box = $('planBox'); if (!box) return;
+  if (!D) { box.innerHTML = ''; return; }
+  extReset();
+  const projs = currentProject === 'ALL' ? ['GD', 'AI', 'TT'] : [currentProject];
+  const withPlan = projs.filter(p => { const P = planOf(p); return P.b || P.r; });
+  if (!withPlan.length) {
+    box.innerHTML = `<button class="card row" data-act="goPlan" style="width:100%;margin-top:12px;padding:10px 12px;gap:10px;text-align:left"><span style="font-size:18px">📅</span><span class="sm grow"><b>Đặt kế hoạch tháng</b><br><span class="xs muted">Nhập ngân sách & số kết quả mục tiêu tháng để app dự báo cuối tháng có đạt không</span></span><span class="muted">›</span></button>`;
+    return;
+  }
+  const cs = withPlan.map(p => [p, planCalc(p)]);
+  if (cs.some(([, c]) => c.loading) && !EXT.dailyState) loadExtDaily();
+  box.innerHTML = cs.map(([p, c]) => planCard(p, c)).join('');
+}
+function planCard(p, c) {
+  const M = c.M;
+  const head = `<div class="row between"><span class="xs muted b" style="text-transform:uppercase;letter-spacing:.05em">📅 Kế hoạch tháng ${M.mo} · ${esc(PROJ_NAME[p])}</span><span class="xs muted">Ngày ${M.dom}/${M.dim}</span></div>`;
+  if (c.loading) return `<div class="card" style="margin-top:12px">${head}<div class="xs muted" style="margin-top:8px"><span class="spin" style="display:inline-block">⟳</span> Đang tải số liệu từ đầu tháng…</div></div>`;
+  if (c.err) return `<div class="card" style="margin-top:12px">${head}<div class="xs bad" style="margin-top:8px">Không tải được số liệu tháng: ${esc(EXT.dailyErr)} <button class="lnk xs" data-act="planRetry" style="padding:0">Thử lại</button></div></div>`;
+  const { P, mtd } = c;
+  const bar = (v, col) => `<div class="bar" style="margin:6px 0 4px;height:7px"><i style="width:${Math.min(100, v * 100).toFixed(1)}%;background:${col}"></i><u style="left:${Math.min(100, c.elapsed * 100).toFixed(1)}%" title="Mức nên đạt tới hôm nay"></u></div>`;
+  let h = '';
+  if (P.b) {
+    const rS = c.fS / P.b, cls = rS > 1.05 ? 'bad' : rS < 0.9 ? 'warn' : 'good';
+    const txt = rS > 1.05 ? `vượt ~${k(c.fS - P.b)}` : rS < 0.9 ? `thiếu ~${k(P.b - c.fS)} so với kế hoạch` : 'đúng kế hoạch';
+    h += `<div style="margin-top:10px"><div class="row between sm"><span>Chi tiêu</span><span class="num"><b>${k(mtd.s)}</b> / ${k(P.b)} · ${Math.round(mtd.s / P.b * 100)}%</span></div>${bar(mtd.s / P.b, 'var(--blue)')}
+      <div class="xs">Dự báo cuối tháng <b class="${cls}">${k(c.fS)}</b> (${Math.round(rS * 100)}%) — <span class="${cls}">${txt}</span></div></div>`;
+  }
+  if (P.r) {
+    const rR = c.fR / P.r, cls = rR >= 1 ? 'good' : rR >= 0.9 ? 'warn' : 'bad';
+    const txt = rR >= 1 ? 'đạt mục tiêu' : `thiếu ~${nf.format(Math.round(P.r - c.fR))} KQ`;
+    h += `<div style="margin-top:10px"><div class="row between sm"><span>Kết quả</span><span class="num"><b>${nf.format(Math.round(mtd.r))}</b> / ${nf.format(P.r)} · ${Math.round(mtd.r / P.r * 100)}%</span></div>${bar(mtd.r / P.r, 'var(--scale)')}
+      <div class="xs">Dự báo cuối tháng <b class="${cls}">${nf.format(Math.round(c.fR))} KQ</b> (${Math.round(rR * 100)}%) — <span class="${cls}">${txt}</span></div></div>`;
+  }
+  const parts = [];
+  if (mtd.r) parts.push(`CPR tháng <b>${k(mtd.cpr)}</b>`);
+  if (c.a7.r) parts.push(`CPR 7N <b>${k(c.a7.cpr)}</b>`);
+  if (c.allowCpr) parts.push(`CPR tối đa cho phần còn lại <b class="${c.a7.r && c.a7.cpr > c.allowCpr ? 'bad' : 'good'}">${k(c.allowCpr)}</b>`);
+  const need = [];
+  if (P.b && mtd.s < P.b) need.push(`~${k(c.needS)}/ngày`);
+  if (P.r && mtd.r < P.r) need.push(`~${nf.format(Math.round(c.needR))} KQ/ngày`);
+  h += `<div class="xs muted" style="margin-top:10px;line-height:1.6">${parts.join(' · ')}${need.length ? `<br>Để đúng kế hoạch cần ${need.join(' và ')} trong ${c.remTime.toFixed(1).replace('.', ',')} ngày còn lại · đang chạy ${k(c.a7.s / 7)}/ngày, ${nf.format(Math.round(c.a7.r / 7))} KQ/ngày (TB 7N)` : ''}</div>`;
+  if (c.allowCpr && c.a7.r && c.a7.cpr > c.allowCpr * 1.03) h += `<div class="xs bad" style="margin-top:6px;line-height:1.5">⚠️ CPR 7 ngày qua cao hơn mức tối đa cho phép — với ngân sách còn lại sẽ không đủ số kết quả. Cần kéo CPR xuống ~${k(c.allowCpr)} hoặc xin thêm ~${k(Math.max(0, (P.r - mtd.r) * c.a7.cpr - (P.b - mtd.s)))} ngân sách.</div>`;
+  if (EXT.dailyErr && EXT.dailyState === 'ok' && !covered(M.m1, M.t)) h += `<div class="xs warn" style="margin-top:6px">Thiếu số liệu một số tài khoản: ${esc(EXT.dailyErr)}</div>`;
+  return `<div class="card" style="margin-top:12px">${head}${h}</div>`;
+}
+
+// ---------- (6) HIỆU QUẢ THEO GIỜ & THEO THỨ ----------
+const HW = { view: 'hour', met: 'cpr' };
+const WD_LBL = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+function openHW() { openSheet('<div class="grab"></div><div id="hwBox"></div>'); extReset(); drawHW(); loadExtHourly(); loadExtDaily(); }
+function hwSeries() {
+  const projs = currentProject === 'ALL' ? ['GD', 'AI', 'TT'] : [currentProject];
+  if (HW.view === 'hour') {
+    if (EXT.hourlyState !== 'ok') return null;
+    return { rows: Array.from({ length: 24 }, (_, h) => { const m = emptyM(); projs.forEach(p => addInto(m, EXT.hourly[p][h])); return { lbl: String(h).padStart(2, '0') + 'h', m: fin(m) }; }),
+      note: '14 ngày qua (không tính hôm nay), cộng dồn theo giờ' };
+  }
+  if (EXT.dailyState !== 'ok') return null;
+  const t = vnDay(0); const days = datesBetween(addDays(t, -28), addDays(t, -1));
+  const acc = Array.from({ length: 7 }, () => ({ m: emptyM(), n: 0 }));
+  days.forEach(d => { const wd = (new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7; acc[wd].n++; projs.forEach(p => addInto(acc[wd].m, EXT.daily[p][d])); });
+  return { rows: acc.map((x, i) => ({ lbl: WD_LBL[i], m: fin(scaleM(x.m, 1 / Math.max(1, x.n))) })), note: '28 ngày qua, mỗi thứ 4 ngày · số liệu là trung bình 1 ngày' };
+}
+function drawHW() {
+  const box = $('hwBox'); if (!box) return;
+  const st = HW.view === 'hour' ? EXT.hourlyState : EXT.dailyState, err = HW.view === 'hour' ? EXT.hourlyErr : EXT.dailyErr;
+  const sr = hwSeries();
+  let body;
+  if (!sr) body = st === 'err' ? `<div class="banner err" style="margin-top:12px">Không tải được: ${esc(err)} <button class="lnk" data-act="hwRetry" style="padding:0">Thử lại</button></div>` : '<div class="empty"><span class="spin" style="display:inline-block">⟳</span> Đang tải dữ liệu từ Meta…</div>';
+  else body = hwBody(sr);
+  box.innerHTML = `<div class="b lg">🕐 Hiệu quả theo giờ & thứ</div><div class="xs muted">${esc(PROJ_NAME[currentProject])}</div>
+    <div class="seg" style="margin-top:10px"><button data-hwv="hour" class="${HW.view === 'hour' ? 'on' : ''}">Theo giờ</button><button data-hwv="wd" class="${HW.view === 'wd' ? 'on' : ''}">Theo thứ</button></div>
+    <div class="seg" style="margin-top:6px">${[['cpr', 'CPR'], ['r', 'Kết quả'], ['s', 'Chi tiêu'], ['ctrL', 'CTR']].map(([kk, l]) => `<button data-hwm="${kk}" class="${HW.met === kk ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${body}<div class="acts" style="margin-top:12px"><button class="btn grow" data-act="closeSheet">Đóng</button></div>`;
+  box.querySelectorAll('[data-hwv]').forEach(b => { b.onclick = e => { e.stopPropagation(); HW.view = b.dataset.hwv; drawHW(); }; });
+  box.querySelectorAll('[data-hwm]').forEach(b => { b.onclick = e => { e.stopPropagation(); HW.met = b.dataset.hwm; drawHW(); }; });
+}
+function hwBody(sr) {
+  const rows = sr.rows; const tot = emptyM(); rows.forEach(x => addInto(tot, x.m)); fin(tot);
+  if (!tot.s) return '<div class="empty">Chưa có chi tiêu trong khoảng này.</div>';
+  const avg = tot.cpr, isH = HW.view === 'hour';
+  const val = m => HW.met === 'cpr' ? (m.r ? m.cpr : 0) : (m[HW.met] || 0);
+  const mx = Math.max(...rows.map(x => val(x.m)), 1e-9);
+  const cls = m => m.s < tot.s * 0.01 ? 'n' : !m.r ? 'r' : !avg ? 'a' : m.cpr <= avg * 0.85 ? 'g' : m.cpr >= avg * 1.2 ? 'r' : 'a';
+  const col = { g: 'var(--scale)', a: '#60a5fa', r: 'var(--kill)', n: '#475569' };
+  // thanh CPR: giờ có tiêu mà 0 KQ hiển thị sọc đỏ đầy (tệ nhất)
+  const fr = r => isH ? nf.format(Math.round(r)) : r.toFixed(1).replace('.', ',');
+  const metTxt = m => HW.met === 'ctrL' ? pct(m.ctrL) : `${k(m.s)} · ${fr(m.r)} KQ`;
+  const list = rows.map(x => { const c = cls(x.m);
+    return `<div class="row" style="gap:8px;padding:3px 0"><span class="xs b num" style="width:26px;flex:none">${x.lbl}</span>
+      <div style="flex:1;min-width:0;height:14px;background:var(--secondary);border-radius:4px;overflow:hidden">${HW.met === 'cpr' && !x.m.r && x.m.s ? '<div style="height:100%;width:100%;background:repeating-linear-gradient(135deg,rgba(251,113,133,.55) 0 5px,rgba(251,113,133,.2) 5px 10px);border-radius:4px" title="Có chi tiêu nhưng 0 kết quả"></div>' : `<div style="height:100%;width:${(val(x.m) / mx * 100).toFixed(1)}%;background:${col[c]};border-radius:4px"></div>`}</div>
+      <span class="xs num" style="flex:none;text-align:right;white-space:nowrap;min-width:142px">${metTxt(x.m)} · <b class="${c === 'g' ? 'good' : c === 'r' ? 'bad' : ''}">${x.m.r ? k(x.m.cpr) : '—'}</b></span></div>`; }).join('');
+  const ins = [];
+  if (isH) {
+    const win = [];
+    for (let h = 0; h < 24; h++) { const m = emptyM(); [h, (h + 1) % 24, (h + 2) % 24].forEach(i => addInto(m, rows[i].m)); fin(m); if (m.s >= tot.s * 0.05 && m.r >= 3) win.push({ h, m }); }
+    const lb = h => `${String(h).padStart(2, '0')}h–${String((h + 3) % 24).padStart(2, '0')}h`;
+    if (win.length >= 2 && avg) {
+      win.sort((a, b) => a.m.cpr - b.m.cpr);
+      const b0 = win[0], w0 = win[win.length - 1];
+      if (b0.m.cpr < avg * 0.95) ins.push(`<li class="good">Khung rẻ nhất <b>${lb(b0.h)}</b>: CPR ${k(b0.m.cpr)}, rẻ hơn TB ${Math.round((1 - b0.m.cpr / avg) * 100)}% · chiếm ${Math.round(b0.m.s / tot.s * 100)}% chi tiêu.</li>`);
+      if (w0.m.cpr > avg * 1.1) ins.push(`<li class="bad">Khung đắt nhất <b>${lb(w0.h)}</b>: CPR ${k(w0.m.cpr)}, đắt hơn TB ${Math.round((w0.m.cpr / avg - 1) * 100)}% · chiếm ${Math.round(w0.m.s / tot.s * 100)}% chi tiêu.</li>`);
+    }
+    const night = emptyM(); [0, 1, 2, 3, 4, 5].forEach(h => addInto(night, rows[h].m)); fin(night);
+    if (night.s >= tot.s * 0.05 && (!night.r || night.cpr > avg * 1.3)) ins.push(`<li class="bad">0h–6h tiêu ${k(night.s)} (${Math.round(night.s / tot.s * 100)}%) với CPR ${night.r ? k(night.cpr) : '— (0 KQ)'}.</li>`);
+  } else {
+    const ok = rows.filter(x => x.m.r > 0);
+    if (ok.length >= 4 && avg) {
+      const so = ok.slice().sort((a, b) => a.m.cpr - b.m.cpr), b0 = so[0], w0 = so[so.length - 1];
+      if (b0.m.cpr < avg * 0.95) ins.push(`<li class="good">Ngày rẻ nhất <b>${b0.lbl}</b>: CPR ${k(b0.m.cpr)}, rẻ hơn TB ${Math.round((1 - b0.m.cpr / avg) * 100)}%.</li>`);
+      if (w0.m.cpr > avg * 1.1) ins.push(`<li class="bad">Ngày đắt nhất <b>${w0.lbl}</b>: CPR ${k(w0.m.cpr)}, đắt hơn TB ${Math.round((w0.m.cpr / avg - 1) * 100)}%.</li>`);
+    }
+    const we = emptyM(), wk = emptyM(); rows.forEach((x, i) => addInto(i >= 5 ? we : wk, x.m)); fin(we); fin(wk);
+    if (we.r && wk.r) { const d = we.cpr / wk.cpr - 1; if (Math.abs(d) >= 0.1) ins.push(`<li class="${d > 0 ? 'bad' : 'good'}">Cuối tuần CPR ${d > 0 ? 'đắt' : 'rẻ'} hơn ngày thường ${Math.round(Math.abs(d) * 100)}% (${k(we.cpr)} so với ${k(wk.cpr)}).</li>`); }
+  }
+  const nR = isH ? tot.r : tot.r * 4;
+  if (nR < 40) ins.push(`<li class="faint">⚠️ Mới có ${Math.round(nR)} kết quả trong mẫu — chênh lệch có thể do ngẫu nhiên, chưa nên kết luận chắc.</li>`);
+  const tzw = isH && EXT.tz.length ? `<div class="banner warn" style="margin-top:8px">Giờ tính theo múi giờ tài khoản. Tài khoản không ở GMT+7: ${esc(EXT.tz.join(', '))}</div>` : '';
+  const part = (isH ? EXT.hourlyErr : EXT.dailyErr) ? `<div class="xs warn" style="margin-top:6px">Thiếu số liệu: ${esc(isH ? EXT.hourlyErr : EXT.dailyErr)}</div>` : '';
+  const tip = isH
+    ? 'Meta chỉ cho đặt lịch chạy theo giờ khi dùng <b>ngân sách trọn đời</b>. Với ngân sách ngày, dùng Quy tắc tự động trong Ads Manager để giảm ngân sách trước khung đắt và tăng lại trước khung rẻ.'
+    : 'Dùng để chọn thời điểm tăng/giảm ngân sách (vd: tăng tối hôm trước ngày rẻ). Không nên tắt hẳn quảng cáo theo ngày vì Meta cần chạy liên tục để tối ưu.';
+  return `<div class="xs muted" style="margin:10px 0 6px;line-height:1.5">${sr.note} · CPR TB ${avg ? k(avg) : '—'} · <span class="good">■ rẻ</span> <span style="color:#60a5fa">■ bình thường</span> <span class="bad">■ đắt</span></div>${tzw}${part}
+    ${ins.length ? `<ul class="bdtips">${ins.join('')}</ul>` : ''}<div>${list}</div><div class="hint" style="margin-top:10px">💡 ${tip}</div>`;
+}
+
 
 // ---------- tiện ích ----------
 const $ = id => document.getElementById(id);
@@ -683,6 +1043,39 @@ function expectedFrac() {
   c += HOUR_W[h] * m / 60;
   return c / tot;
 }
+
+// ---------- TIẾN ĐỘ CHI TIÊU (Budget pacing) ----------
+// So chi tiêu hôm nay với mức "đáng lẽ đã tiêu" theo đường cong traffic VN (expectedFrac)
+function todaySpend(lvl, id) {
+  if (!D || !D.days || D.days[0] !== vnDay(0)) return null; // dữ liệu cũ (cache hôm qua) → không tính
+  const d0 = D.days[0];
+  if (lvl === 'adset') { const e = D.ins.adset[id]; return e && e.d && e.d[d0] ? (e.d[d0].s || 0) : 0; }
+  if (lvl === 'campaign') { let s = 0; Object.values(D.ins.adset).forEach(e => { if (e.campaignId === id && e.d && e.d[d0]) s += e.d[d0].s || 0; }); return s; }
+  return null;
+}
+function paceInfo(lvl, id, bud, on) {
+  if (!bud || !(bud.v > 0) || !/Hằng ngày|^CBO$/.test(bud.sub || '') || lvl === 'ad') return null;
+  if (lvl === 'adset' && !bud.edit) return null;          // nhóm dùng NS chiến dịch → xem tiến độ ở cấp chiến dịch
+  const spent = todaySpend(lvl, id); if (spent == null) return null;
+  const ef = Math.max(expectedFrac(), 0.001), B = bud.v;
+  const use = spent / B, ratio = spent / (B * ef);
+  const proj = Math.round(Math.min(spent / ef, B * 1.25));
+  let c, t;
+  if (!on) return null;
+  if (ef < 0.06) { c = 'ok'; t = 'Đầu ngày'; }
+  else if (use >= 0.97) { c = 'cap'; t = 'Chạm trần'; }
+  else if (spent === 0 && ef >= 0.15) { c = 'stuck'; t = 'Không tiêu'; }
+  else if (ratio < 0.6) { c = 'slow'; t = 'Chậm'; }
+  else if (ratio > 1.35) { c = 'fast'; t = 'Nhanh'; }
+  else { c = 'ok'; t = 'Đúng tiến độ'; }
+  return { c, t, spent, use, ratio, ef, proj, B };
+}
+function paceHtml(p) {
+  if (!p) return '';
+  const tip = `Hôm nay đã tiêu ${vnd(p.spent)} / ${vnd(p.B)} (${Math.round(p.use * 100)}%). Theo giờ này đáng lẽ ~${Math.round(p.ef * 100)}%. Dự kiến cuối ngày ≈ ${vnd(p.proj)}`;
+  return `<div class="pace ${p.c}" title="${esc(tip)}"><div class="pb"><i style="width:${Math.min(100, p.use * 100).toFixed(1)}%"></i><u style="left:${Math.min(100, p.ef * 100).toFixed(1)}%"></u></div><div class="pl">${Math.round(p.use * 100)}% · ${p.t}</div></div>`;
+}
+let paceFilterChip = null;
 
 const DEFAULT_TOKEN = 'EAAgZA4sZAt6ZA0BSh5iEMZAhb61sZBxw05WU3JKthrUPgRZBudskSZCJdRckAPvc3DOu2YjvH9iIuAmkNxROlc4oHN9vezyx4npopApdpjjU5l929twP2m9pQ0FIAZCMFgABZBTS703wYJBLJZC4baNXnfNaNNKjXAgKzuMmrSTfnIQ1jHLSUsfFd4zTV5UikD';
 
@@ -1261,6 +1654,7 @@ function renderNoToken() {
 
 // ---------- TAB VIỆC CẦN LÀM ----------
 function renderTodo() {
+  if (!D) { if ($('planBox')) $('planBox').innerHTML = ''; if ($('fatigueBox')) $('fatigueBox').innerHTML = ''; }
   if (!D) { if (!getToken() && !demoMode) renderNoToken(); else { $('healthCard').innerHTML = '<div class="card empty">Đang tải số liệu từ Meta…</div>'; } return; }
   const today = focusDay === 'today';
   const T = today ? [D.days[0]] : [D.days[1]];
@@ -1299,11 +1693,25 @@ function renderTodo() {
     ${chip('scale', cnt('scale'), 'Tăng', '&nbsp;')}
     ${chip('watch', cnt('watch'), 'Xem lại', '&nbsp;')}</div>
     <div class="row between" style="margin-top:10px">
-      <span class="xs muted">${recFilter === 'all' ? 'Sắp xếp theo mức độ ưu tiên' : '<button class="lnk xs" data-filter="all" style="padding:0">← Xem tất cả</button>'}</span>
+      <span class="xs muted">${recFilter !== 'all' ? '<button class="lnk xs" data-filter="all" style="padding:0">← Xem tất cả</button>' : ''}</span>
+      <span class="row" style="gap:4px">
+        <span class="xs muted" style="margin-right:2px">Sắp xếp:</span>
+        <button class="btn xs ${recSort === 'priority' ? 'p' : ''}" data-recsort="priority" style="padding:4px 8px;font-size:11px">Ưu tiên</button>
+        <button class="btn xs ${recSort === 'spend' ? 'p' : ''}" data-recsort="spend" style="padding:4px 8px;font-size:11px">Chi tiêu ↓</button>
+        <button class="btn xs ${recSort === 'cpr' ? 'p' : ''}" data-recsort="cpr" style="padding:4px 8px;font-size:11px">CPR ↓</button>
+      </span>
       <span class="row" style="gap:6px">${act.some(r => r.action && !doneMap[r.key]) ? '<button class="btn xs" data-act="selectAll" style="padding:6px 10px">☑ Chọn tất cả đề xuất</button>' : ''}</span>
     </div>`;
 
-  const list = act.filter(r => recFilter === 'all' || r.type === recFilter);
+  const list = (() => {
+    let filtered = act.filter(r => recFilter === 'all' || r.type === recFilter);
+    if (recSort === 'spend') filtered = [...filtered].sort((a, b) => b.t.s - a.t.s);
+    else if (recSort === 'cpr') filtered = [...filtered].sort((a, b) => {
+      const ca = a.t.r ? a.t.cpr : 1e15, cb = b.t.r ? b.t.cpr : 1e15;
+      return cb - ca;
+    });
+    return filtered;
+  })();
   if (!list.length) {
     $('recList').innerHTML = `<div class="card empty">${K || currentProject === 'ALL' ? '✅ Không có việc gấp' + (recFilter !== 'all' ? ' trong mục này' : '') + '. Tài khoản đang chạy trong ngưỡng an toàn.' : 'Đặt CPR mục tiêu để app bắt đầu đề xuất.'}</div>`;
   } else {
@@ -1315,6 +1723,8 @@ function renderTodo() {
     <details style="margin-top:6px"><summary class="h2">✅ Đang ổn / chưa đủ dữ liệu (${OKS.length}) ▾</summary>
     <div class="card" style="padding:0">${OKS.sort((a, b) => b.t.s - a.t.s).map(o => `<div class="lrow" data-open="adset:${o.ent.id}"><div class="row grow" style="min-width:0"><span class="sd ${o.dot}"></span><span class="sm b trunc">${esc(o.ent.name)}</span></div><span class="xs muted">${esc(o.note)}</span>
       <div class="xs muted" style="grid-column:1/-1">${k(o.t.s)} · ${o.t.r} KQ${o.t.r ? ' · CPR ' + k(o.t.cpr) : ''} · ${esc(o.ent.accName)}</div></div>`).join('') || '<div class="empty">Không có nhóm nào.</div>'}</div></details>`;
+  renderPlan();
+  renderFatigue();
 }
 
 function metricBox(label, m, K) {
@@ -1350,11 +1760,11 @@ function renderBulk() {
   if (currentTab === 'perf' && D) {
     const rows = amSelectedRows();
     if (!rows.length) { bar.classList.add('hidden'); return; }
-    const hasBud = rows.some(r => r.bud.edit);
+    const hasBud = amLvl !== 'ad' && rows.some(r => r.bud.edit || (r.bud.sub || '').startsWith('CBO'));
     inn.innerHTML = `<span class="grow b sm">Đã chọn ${rows.length} ${AM_LVL_NAME[amLvl]}</span>
       <button class="btn" style="background:#fff;color:#be123c;border-color:#fff" data-act="amOff">Tắt</button>
       <button class="btn" style="background:#fff;color:#047857;border-color:#fff" data-act="amOn">Bật</button>
-      ${hasBud ? '<button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.5)" data-act="amDown">−20%</button><button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.5)" data-act="amUp">+20%</button>' : ''}
+      ${hasBud ? '<button class="btn" style="background:#fff;color:#1d4ed8;border-color:#fff" data-act="amBudget">💰 Ngân sách</button>' : ''}
       <button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.4);padding:9px 10px" data-act="amClear">✕</button>`;
     bar.classList.remove('hidden'); return;
   }
@@ -1409,6 +1819,12 @@ function budgetInfo(lvl, id) {
     const c = D.campaigns[id] || {};
     if (c.daily_budget > 0) return { v: c.daily_budget, t: k(c.daily_budget), sub: 'Hằng ngày', edit: true };
     if (c.lifetime_budget > 0) return { v: c.lifetime_budget, t: k(c.lifetime_budget), sub: 'Trọn đời' };
+    // Fallback: derive CBO budget from adset sub-object (in case campaigns API missed it)
+    const campAdsets = Object.values(D.adsets || {}).filter(a => a.campaignId === id);
+    const cboA = campAdsets.find(a => a.camp && a.camp.daily_budget > 0);
+    if (cboA) return { v: cboA.camp.daily_budget, t: k(cboA.camp.daily_budget), sub: 'CBO · Hằng ngày', edit: true };
+    const cboL = campAdsets.find(a => a.camp && a.camp.lifetime_budget > 0);
+    if (cboL) return { v: cboL.camp.lifetime_budget, t: k(cboL.camp.lifetime_budget), sub: 'CBO · Trọn đời' };
     return { v: -1, t: 'Dùng NS nhóm QC', muted: true };
   }
   if (lvl === 'adset') {
@@ -1416,7 +1832,8 @@ function budgetInfo(lvl, id) {
     if (!a) return { v: -2, t: '—', muted: true };
     if (a.daily_budget > 0) return { v: a.daily_budget, t: k(a.daily_budget), sub: 'Hằng ngày', edit: true };
     if (a.lifetime_budget > 0) return { v: a.lifetime_budget, t: k(a.lifetime_budget), sub: 'Trọn đời' };
-    if (a.camp && (a.camp.daily_budget > 0 || a.camp.lifetime_budget > 0)) return { v: -1, t: 'Dùng NS chiến dịch', muted: true };
+    if (a.camp && a.camp.daily_budget > 0) return { v: a.camp.daily_budget, t: k(a.camp.daily_budget), sub: 'CBO', muted: true };
+    if (a.camp && a.camp.lifetime_budget > 0) return { v: a.camp.lifetime_budget, t: k(a.camp.lifetime_budget), sub: 'CBO · Trọn đời', muted: true };
     return { v: -2, t: '—', muted: true };
   }
   return { v: -2, t: 'Dùng NS nhóm QC', muted: true };
@@ -1429,7 +1846,8 @@ function amRows(lvl) {
     if (!meta || !inScope(meta.project)) return;
     fin(m); if (extra && extra.pm) fin(extra.pm);
     const on = lvl === 'ad' ? adOn(id) : isOn(lvl, id);
-    rows.push(Object.assign({ lvl, id, name: meta.name || id, acc: meta.accName, accId: meta.accId, project: meta.project, m, on, dl: delivery(lvl, id, meta), bud: budgetInfo(lvl, id) }, extra || {}));
+    const bud = budgetInfo(lvl, id);
+    rows.push(Object.assign({ lvl, id, name: meta.name || id, acc: meta.accName, accId: meta.accId, project: meta.project, m, on, dl: delivery(lvl, id, meta), bud, pace: paceInfo(lvl, id, bud, on), adsetId: meta.adsetId, campaignId: meta.campaignId }, extra || {}));
   };
   if (lvl === 'campaign') {
     const map = {};
@@ -1464,6 +1882,8 @@ function amRows(lvl) {
   let out = rows.filter(r => {
     if (amFilter === 'on' && !r.on) return false;
     if (amFilter === 'onspent' && !r.on && r.m.s <= 0) return false;
+    if (amFilter === 'pace_slow' && !(r.pace && (r.pace.c === 'slow' || r.pace.c === 'stuck'))) return false;
+    if (amFilter === 'pace_fast' && !(r.pace && (r.pace.c === 'fast' || r.pace.c === 'cap'))) return false;
     if (q && !((r.name || '') + ' ' + (r.acc || '') + ' ' + (r.sub || '')).toLowerCase().includes(q)) return false;
     return true;
   });
@@ -1481,7 +1901,7 @@ function amRows(lvl) {
 
 function renderPerf() {
   if (!D) { $('perfKpi').innerHTML = ''; $('amTable').innerHTML = '<div class="empty">Chưa có dữ liệu.</div>'; $('amTabs').innerHTML = ''; return; }
-  $('dateLbl').textContent = curLabel();
+  $('dateLbl').textContent = curLabel(); syncQdBar();
   $('dateCmp').textContent = amCompare ? 'So với ' + prevLabel() : '';
   if (!rangeReady()) {
     ensureRange();
@@ -1560,7 +1980,7 @@ function renderAmTable() {
       <button class="sw ${r.on ? 'on' : ''}" data-amtog="${r.lvl}:${r.id}" aria-label="${r.on ? 'Tắt' : 'Bật'}" title="${r.on ? 'Đang bật — bấm để tắt' : 'Đang tắt — bấm để bật'}"></button>
       ${thumb}<div class="t">${nameEl}${rec ? `<span class="rp ${rec.type}">${REC_LBL[rec.type]}</span>` : ''}<div class="s"><button class="lnk" data-open="${r.lvl}:${r.id}" style="padding:0;font-size:11px">📊 Chi tiết</button> · ${esc(r.acc || '')}${r.lvl !== 'campaign' && r.sub ? ' · ' + esc(r.sub) : ''}</div></div></div></td>`;
     h += `<td class="l"><span class="dl ${r.dl.c}"><i></i><span>${esc(r.dl.t)}${r.dl.sub ? `<span class="sub">${esc(r.dl.sub)}</span>` : ''}</span></span></td>`;
-    h += `<td>${r.bud.edit ? `<span class="bud" data-open="${r.lvl}:${r.id}">${esc(r.bud.t)}</span>` : `<span class="${r.bud.muted ? 'faint' : ''}">${esc(r.bud.t)}</span>`}${r.bud.sub ? `<div class="xs faint">${r.bud.sub}</div>` : ''}</td>`;
+    h += `<td>${r.bud.edit ? `<span class="bud" data-open="${r.lvl}:${r.id}">${esc(r.bud.t)}</span>` : `<span class="${r.bud.muted ? 'faint' : ''}">${esc(r.bud.t)}</span>`}${r.bud.sub ? `<div class="xs faint">${r.bud.sub}</div>` : ''}${paceHtml(r.pace)}</td>`;
     const cp = amCompare && r.pm ? r.pm : null;
     const D_ = (cur, key, kind, ok) => cp && ok ? dlt(cur, cp[key], kind) : '';
     h += `<td><b>${r.m.r ? nf.format(r.m.r) : '—'}</b>${D_(r.m.r, 'r', 'up', true) || (r.m.r ? `<div class="xs faint">${esc(evLbl)}</div>` : '')}</td>`;
@@ -1574,6 +1994,21 @@ function renderAmTable() {
   const wrap = $('amTable'); const sx = wrap.scrollLeft, sy = wrap.scrollTop;
   wrap.innerHTML = h; wrap.scrollLeft = sx; wrap.scrollTop = sy;
   window._amRows = rows;
+  renderPaceSum();
+}
+function renderPaceSum() {
+  const box = $('paceSum'); if (!box) return;
+  if (!D || amLvl === 'creative' || amLvl === 'ad' || !D.days || D.days[0] !== vnDay(0)) { box.innerHTML = ''; return; }
+  const f0 = amFilter; if (f0.startsWith('pace')) amFilter = 'onspent';
+  const all = f0.startsWith('pace') ? amRows(amLvl) : (window._amRows || []);
+  amFilter = f0;
+  const n = { slow: 0, fast: 0 };
+  all.forEach(r => { if (!r.pace) return; if (r.pace.c === 'slow' || r.pace.c === 'stuck') n.slow++; if (r.pace.c === 'fast' || r.pace.c === 'cap') n.fast++; });
+  if (!n.slow && !n.fast) { box.innerHTML = amFilter.startsWith('pace') ? '<button data-pacef="clear" style="color:var(--muted-foreground)">✕ Bỏ lọc tiến độ</button>' : ''; return; }
+  box.innerHTML = `<span class="xs muted" style="align-self:center">⏱ Tiến độ hôm nay (${Math.round(expectedFrac() * 100)}% ngày):</span>`
+    + (n.slow ? `<button data-pacef="pace_slow" class="${amFilter === 'pace_slow' ? 'on' : ''}" style="color:var(--cut)">${n.slow} tiêu chậm</button>` : '')
+    + (n.fast ? `<button data-pacef="pace_fast" class="${amFilter === 'pace_fast' ? 'on' : ''}" style="color:#93c5fd">${n.fast} tiêu nhanh / chạm trần</button>` : '')
+    + (amFilter.startsWith('pace') ? '<button data-pacef="clear" style="color:var(--muted-foreground)">✕ Bỏ lọc</button>' : '');
 }
 
 function amSelectedRows() { if (amLvl === 'creative') return []; const sel = amSel[amLvl]; return (window._amRows || []).filter(r => sel.has(r.id)); }
@@ -1585,6 +2020,61 @@ function amBulk(kind) {
   if (kind === 'up' || kind === 'down') items = rows.filter(r => r.bud.edit).map(r => ({ action: budgetAction({ id: r.id, type: r.lvl, cur: r.bud.v }, kind === 'up' ? 20 : -20, r.name), reason: 'Thao tác hàng loạt', acc: r.acc }));
   if (!items.length) { toast(kind === 'off' ? 'Các mục đã chọn đều đang tắt' : kind === 'on' ? 'Các mục đã chọn đều đang bật' : 'Các mục đã chọn không có ngân sách ngày để chỉnh', 'info'); return; }
   confirmActions(items);
+}
+
+// ---------- CHỈNH NGÂN SÁCH HÀNG LOẠT ----------
+// Gom mục đã chọn về "chủ ngân sách" thật: nhóm ABO → chính nhóm; nhóm CBO → chiến dịch cha (khử trùng lặp)
+function bulkBudgetTargets() {
+  const rows = amSelectedRows(); const map = new Map(); const skipped = [];
+  rows.forEach(r => {
+    if (r.bud.edit && r.bud.v > 0) { map.set(r.id, { id: r.id, type: r.lvl, cur: r.bud.v, name: r.name, acc: r.acc, via: '' }); return; }
+    if (r.lvl === 'adset') {
+      const a = D.adsets[r.id]; const bt = a && budgetTarget(a);
+      if (bt && bt.type === 'campaign') {
+        const ex = map.get(bt.id);
+        if (ex) ex.via += ', ' + r.name;
+        else map.set(bt.id, { id: bt.id, type: 'campaign', cur: bt.cur, name: nameOf('campaign', bt.id), acc: r.acc, via: r.name });
+        return;
+      }
+    }
+    skipped.push(r.name + (/Trọn đời/.test(r.bud.sub || '') ? ' (NS trọn đời)' : ''));
+  });
+  return { list: [...map.values()], skipped };
+}
+const BB = { mode: 'pct', pct: 20, amt: 0 };
+function openBulkBudget() {
+  const { list, skipped } = bulkBudgetTargets();
+  if (!list.length) { toast('Các mục đã chọn không có ngân sách ngày để chỉnh', 'info'); return; }
+  const calc = t => {
+    if (BB.mode === 'amt') return Math.max(30000, round1000(BB.amt || 0));
+    return Math.max(30000, round1000(t.cur * (1 + BB.pct / 100)));
+  };
+  const draw = () => {
+    const tot0 = list.reduce((a, t) => a + t.cur, 0), tot1 = list.reduce((a, t) => a + calc(t), 0);
+    const bigJump = BB.mode === 'pct' ? Math.abs(BB.pct) > 30 : list.some(t => Math.abs(calc(t) / t.cur - 1) > 0.3);
+    const chip = v => `<button data-bbp="${v}" class="${v < 0 ? 'dn' : 'up'} ${BB.mode === 'pct' && BB.pct === v ? 'on' : ''}">${v > 0 ? '+' : '−'}${Math.abs(v)}%</button>`;
+    $('sheet').innerHTML = `<div class="grab"></div><div class="b lg">💰 Chỉnh ngân sách ${list.length} mục</div>
+      <div class="seg" style="margin-top:10px"><button data-bbm="pct" class="${BB.mode === 'pct' ? 'on' : ''}">Tăng / giảm %</button><button data-bbm="amt" class="${BB.mode === 'amt' ? 'on' : ''}">Đặt cùng 1 mức</button></div>
+      ${BB.mode === 'pct' ? `<div class="bbchips" style="margin-top:10px">${[-50, -30, -20, -10, 10, 20, 30, 50].map(chip).join('')}</div>
+        <label class="fl">Hoặc nhập % tuỳ ý (âm = giảm)</label><input id="bbPct" class="field num" type="number" step="5" value="${BB.pct}">`
+      : `<label class="fl">Ngân sách ngày mới cho mỗi mục (đ)</label><input id="bbAmt" class="field num" inputmode="numeric" value="${BB.amt || ''}" placeholder="VD: 500000">`}
+      ${bigJump ? '<div class="banner warn" style="margin-top:10px">⚠️ Thay đổi trên 30% một lần dễ làm nhóm quay lại <b>giai đoạn học</b>. Media buyer thường tăng 20–30%/lần, cách nhau 2–3 ngày.</div>' : ''}
+      <div class="row between" style="margin-top:12px"><span class="sm muted">Tổng NS ngày</span><span class="sm b num">${vnd(tot0)} → <span class="${tot1 > tot0 ? 'good' : tot1 < tot0 ? 'bad' : ''}">${vnd(tot1)}</span></span></div>
+      <div style="margin-top:6px;max-height:38vh;overflow:auto">${list.map(t => `<div class="bbrow"><div class="sm b clamp2">${esc(t.name)}${t.type === 'campaign' && t.via ? ' <span class="rp watch">CBO</span>' : ''}</div><div class="sm num" style="text-align:right;white-space:nowrap">${k(t.cur)} → <b>${k(calc(t))}</b></div>${t.via ? `<div class="xs faint" style="grid-column:1/-1">Chỉnh NS chiến dịch vì nhóm dùng CBO: ${esc(t.via)}</div>` : ''}</div>`).join('')}</div>
+      ${skipped.length ? `<div class="hint">Bỏ qua ${skipped.length} mục không có NS ngày: ${esc(skipped.slice(0, 3).join(', '))}${skipped.length > 3 ? '…' : ''}</div>` : ''}
+      <div class="acts" style="margin-top:12px"><button class="btn grow" data-act="closeSheet">Huỷ</button><button class="btn p grow" id="bbGo">Áp dụng</button></div>`;
+    const pin = $('bbPct'); if (pin) pin.onchange = e => { const v = parseFloat(e.target.value); if (isFinite(v) && v > -90) { BB.pct = v; draw(); } };
+    const ain = $('bbAmt'); if (ain) ain.onchange = e => { BB.amt = parseInt(String(e.target.value).replace(/\D/g, '')) || 0; draw(); };
+    $('sheet').querySelectorAll('[data-bbp]').forEach(b => b.onclick = ev => { ev.stopPropagation(); BB.mode = 'pct'; BB.pct = +b.dataset.bbp; draw(); });
+    $('sheet').querySelectorAll('[data-bbm]').forEach(b => b.onclick = ev => { ev.stopPropagation(); BB.mode = b.dataset.bbm; draw(); });
+    $('bbGo').onclick = () => {
+      if (BB.mode === 'amt' && !(BB.amt > 0)) { toast('Nhập số tiền ngân sách mới', 'err'); return; }
+      const items = list.map(t => { const to = calc(t); return { action: { kind: 'budget', id: t.id, type: t.type, name: t.name, from: t.cur, to, pct: Math.round((to / t.cur - 1) * 100) }, reason: 'Chỉnh NS hàng loạt' + (BB.mode === 'pct' ? ' ' + (BB.pct > 0 ? '+' : '') + BB.pct + '%' : ' về ' + k(BB.amt)), acc: t.acc }; }).filter(it => it.action.to !== it.action.from);
+      if (!items.length) { toast('Không có thay đổi', 'info'); return; }
+      closeSheet(); confirmActions(items);
+    };
+  };
+  openSheet(''); draw();
 }
 
 // ---------- XẾP HẠNG CREATIVE ----------
@@ -1645,6 +2135,7 @@ function creativeGroups() {
 function relCls(v, med) { if (!med || !v) return ''; return v >= med * 1.2 ? 'good' : v <= med * 0.8 ? 'bad' : ''; }
 
 function renderCreativeTable() {
+  const FK = {}; fatigueList().forEach(f => { FK[f.key] = f.lvl; });
   const list = creativeGroups();
   const med = list.med;
   const key = crSort.k, dir = crSort.d;
@@ -1663,7 +2154,7 @@ function renderCreativeTable() {
     const dcls = statusDot(g.m, g.K);
     const th = g.thumb ? `<img class="thumb" style="width:40px;height:40px" src="${esc(g.thumb)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;thumb ph&quot;>${g.video ? '🎬' : '🖼️'}</div>'">` : `<div class="thumb ph">${g.video ? '🎬' : '🖼️'}</div>`;
     h += `<tr><td class="nm"><div class="amname">${th}<div class="t"><span class="lk" data-cr="${esc(g.key)}">${esc(g.name)}</span>
-      <div class="s"><span class="vt ${g.verdict.c}">${g.verdict.t}</span> ${g.video ? '🎬 Video' : '🖼️ Ảnh'} · ${g.on} đang chạy · ${esc([...g.accs].join(', '))}</div></div></div></td>`;
+      <div class="s"><span class="vt ${g.verdict.c}">${g.verdict.t}</span>${FK[g.key] ? `<span class="vt ${FK[g.key] === 'tired' ? 'lose' : 'mid'}">${FK[g.key] === 'tired' ? 'Mệt' : 'Sắp mệt'}</span>` : ''} ${g.video ? '🎬 Video' : '🖼️ Ảnh'} · ${g.on} đang chạy · ${esc([...g.accs].join(', '))}</div></div></div></td>`;
     h += `<td>${g.rank ? `<b style="font-size:14px">${medal(g.rank)}</b>` : '<span class="faint">—</span>'}</td>`;
     h += `<td>${g.ads.length} QC<div class="xs faint">${g.adsets.size} nhóm</div></td>`;
     h += `<td><b>${g.m.r || '—'}</b>${D_(g.m.r, 'r', 'up', true)}</td>`;
@@ -2059,6 +2550,72 @@ function renderLog() {
 }
 
 // ---------- TAB CÀI ĐẶT ----------
+// ─── Quick date preset ───────────────────────────────────────────────────────
+function applyQdPreset(preset) {
+  const r = presetRange(preset); if (!r) return;
+  PR = { preset, since: r[0], until: r[1] };
+  LS.set('ao_range', PR);
+  renderPerf();
+}
+function syncQdBar() { document.querySelectorAll('.qd').forEach(b => b.classList.toggle('on', b.dataset.qdpreset === PR.preset)); }
+
+// ─── Auto-refresh ────────────────────────────────────────────────────────────
+function setAutoRefresh(minutes) {
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  autoRefreshInterval = minutes;
+  const btn = document.getElementById('arBtn');
+  if (!btn) return;
+  if (minutes > 0) {
+    autoRefreshTimer = setInterval(() => { if (D) fetchAll(); }, minutes * 60 * 1000);
+    btn.textContent = `⏱ ${minutes}p`;
+    btn.classList.remove('off');
+    toast(`Tự động làm mới mỗi ${minutes} phút`, 'ok');
+  } else {
+    btn.textContent = '⏱ Tắt';
+    btn.classList.add('off');
+  }
+}
+function toggleAutoRefresh() {
+  const opts = [0, 5, 10, 15, 30];
+  const cur = opts.indexOf(autoRefreshInterval);
+  const next = opts[(cur + 1) % opts.length];
+  if (next === 0) {
+    setAutoRefresh(0);
+    toast('Đã tắt tự động làm mới', 'info');
+  } else {
+    setAutoRefresh(next);
+  }
+}
+
+// ─── Xuất dữ liệu bảng (CSV / copy dán Google Sheet) ─────────────────────────
+function tableMatrix() {
+  const rows = window._amRows || [];
+  if (!D || !rows.length) return null;
+  const head = ['Cấp', 'Tên', 'Tài khoản', 'Thuộc', 'Trạng thái', 'Ngân sách ngày', 'Tiến độ hôm nay', 'Kết quả', 'CPR', 'Chi tiêu', 'Hiển thị', 'Click link', 'CTR link %', 'CPC', 'CPM', 'Click→KQ %'];
+  const r2 = n => Math.round(n || 0), p2 = n => (n || 0).toFixed(2);
+  const body = rows.map(r => [AM_LVL_NAME[r.lvl], r.name, r.acc || '', r.lvl !== 'campaign' ? (r.sub || '') : '', r.on ? 'Bật' : 'Tắt',
+    r.bud.v > 0 ? r.bud.v : '', r.pace ? Math.round(r.pace.use * 100) + '% ' + r.pace.t : '',
+    r.m.r, r.m.r ? r2(r.m.cpr) : '', r2(r.m.s), r.m.imp, r.m.lc, p2(r.m.ctrL), r.m.lc ? r2(r.m.cpc) : '', r.m.imp ? r2(r.m.cpm) : '', r.m.lc ? p2(r.m.cr) : '']);
+  return [['Khoảng ngày: ' + curLabel()], head, ...body];
+}
+function exportCSV() {
+  const M = tableMatrix(); if (!M) { toast('Chưa có dữ liệu', 'err'); return; }
+  const csv = '﻿' + M.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const name = `ads_${currentProject}_${amLvl}_${PR.since}_${PR.until}.csv`;
+  const inTg = window.Telegram && Telegram.WebApp && Telegram.WebApp.initData;
+  if (inTg) { copyTSV(); toast('Trong Telegram không tải file được — đã copy bảng, dán vào Google Sheet/Excel', 'info', 5000); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('✓ Đã xuất CSV', 'ok');
+}
+async function copyTSV() {
+  const M = tableMatrix(); if (!M) { toast('Chưa có dữ liệu', 'err'); return; }
+  const tsv = M.map(r => r.map(v => String(v).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
+  try { await navigator.clipboard.writeText(tsv); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = tsv; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast(`✓ Đã copy ${M.length - 2} dòng — mở Google Sheet và dán (Ctrl/⌘+V)`, 'ok', 4000);
+}
+
 function renderSettings() {
   const tok = getToken();
   const projRow = p => {
@@ -2067,6 +2624,8 @@ function renderSettings() {
     return `<div class="card" style="background:var(--card2);margin-top:10px"><b>${PROJ_NAME[p]}</b>
       <label class="fl">CPR mục tiêu (đ)</label><input class="field num" inputmode="numeric" data-target="${p}" value="${+S.targets[p] || ''}" placeholder="Để trống = tự động (${auto ? k(auto) : 'chưa đủ dữ liệu'})">
       <label class="fl">Kết quả tính là</label><select class="field" data-event="${p}">${Object.entries(EVENTS).map(([key, v]) => `<option value="${key}" ${S.events[p] === key ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
+      <label class="fl">📅 Ngân sách tháng (đ)</label><input class="field num" inputmode="numeric" data-planb="${p}" value="${planOf(p).b || ''}" placeholder="VD: 300000000 — để trống nếu chưa có">
+      <label class="fl">📅 Số kết quả mục tiêu tháng</label><input class="field num" inputmode="numeric" data-planr="${p}" value="${planOf(p).r || ''}" placeholder="VD: 1500">
       <div class="hint">Đang dùng: ${t.v ? vnd(t.v) + (t.auto ? ' (TB 7 ngày qua)' : ' (bạn đặt)') : 'chưa có'}</div></div>`;
   };
   const num = (key, lbl, hint, step) => `<label class="fl">${lbl}</label><input class="field num" type="number" step="${step || 0.1}" data-num="${key}" value="${S[key]}"><div class="hint">${hint}</div>`;
@@ -2101,6 +2660,9 @@ function saveSettings() {
   const old = JSON.stringify([S.events, S.attribution, S.excluded]);
   document.querySelectorAll('[data-target]').forEach(i => { S.targets[i.dataset.target] = parseInt(String(i.value).replace(/\D/g, '')) || 0; });
   document.querySelectorAll('[data-event]').forEach(i => { S.events[i.dataset.event] = i.value; });
+  S.plan = S.plan || {};
+  document.querySelectorAll('[data-planb]').forEach(i => { const p = i.dataset.planb; S.plan[p] = Object.assign({}, S.plan[p], { b: parseInt(String(i.value).replace(/\D/g, '')) || 0 }); });
+  document.querySelectorAll('[data-planr]').forEach(i => { const p = i.dataset.planr; S.plan[p] = Object.assign({}, S.plan[p], { r: parseInt(String(i.value).replace(/\D/g, '')) || 0 }); });
   document.querySelectorAll('[data-num]').forEach(i => { const v = parseFloat(i.value); if (isFinite(v) && v > 0) S[i.dataset.num] = v; });
   S.attribution = $('attrSel').value;
   S.excluded = $('exclIn') ? $('exclIn').value : S.excluded;
@@ -2121,6 +2683,8 @@ function buildReport() {
   const line = r => `• ${r.ent.name} — ${k(r.t.s)}, ${r.t.r} KQ${r.t.r ? ', CPR ' + k(r.t.cpr) : ''}`;
   let s = `📊 BÁO CÁO ADS — ${PROJ_NAME[currentProject]}\n🗓 ${today ? 'Hôm nay ' + ddmm(D.days[0]) + ' (tới ' + hhmm(Date.now()) + ')' : 'Hôm qua ' + ddmm(D.days[1])}\n\n`;
   s += `💰 Chi tiêu: ${vnd(m.s)}\n🎯 Kết quả: ${m.r}\n💵 CPR: ${m.r ? vnd(m.cpr) : '—'}${K ? ' (mục tiêu ' + vnd(K) + ')' : ''}\n🔗 CTR link: ${pct(m.ctrL)} · CPM ${k(m.cpm)} · Click→KQ ${pct(m.cr)}\n`;
+  const pc = currentProject !== 'ALL' ? planCalc(currentProject) : null;
+  if (pc && !pc.loading && !pc.err) s += `\n📅 Tháng ${pc.M.mo} (ngày ${pc.M.dom}/${pc.M.dim}): tiêu ${k(pc.mtd.s)}${pc.P.b ? '/' + k(pc.P.b) : ''} · ${nf.format(Math.round(pc.mtd.r))}${pc.P.r ? '/' + nf.format(pc.P.r) : ''} KQ\n📈 Dự báo cuối tháng: ${k(pc.fS)} · ${nf.format(Math.round(pc.fR))} KQ${pc.allowCpr ? ' · CPR tối đa còn lại ' + k(pc.allowCpr) : ''}\n`;
   const done = LS.get('ao_log', []).filter(x => !x.undone && x.ts > Date.now() - 24 * 3600e3 && !x.demo === !demoMode);
   if (by('kill').length) s += `\n🔴 CẦN TẮT (${by('kill').length}) — đang đốt ${k(by('kill').reduce((a, r) => a + r.t.s, 0))}\n` + by('kill').slice(0, 6).map(line).join('\n') + '\n';
   if (by('cut').length) s += `\n🟠 GIẢM NGÂN SÁCH (${by('cut').length})\n` + by('cut').slice(0, 5).map(line).join('\n') + '\n';
@@ -2158,7 +2722,7 @@ function switchTab(tab) {
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-dppre],[data-dpnav],[data-dpday],[data-cr],[data-crsort],[data-crgroup],[data-amall],[data-amsel],[data-amclr],[data-amtab],[data-amsort],[data-amtog],[data-amdrill],[data-act],[data-tab],[data-proj],[data-focus],[data-filter],[data-run],[data-snooze],[data-unsnooze],[data-undo],[data-open],[data-win],[data-lvl],[data-sel]');
+  const t = ev.target.closest('[data-dppre],[data-dpnav],[data-dpday],[data-cr],[data-crsort],[data-crgroup],[data-amall],[data-amsel],[data-amclr],[data-amtab],[data-amsort],[data-amtog],[data-amdrill],[data-act],[data-tab],[data-proj],[data-focus],[data-filter],[data-recsort],[data-run],[data-snooze],[data-unsnooze],[data-undo],[data-open],[data-win],[data-lvl],[data-sel],[data-qdpreset],[data-pacef]');
   if (!t) { if (ev.target.id === 'ov') closeSheet(); return; }
   const ds = t.dataset;
   if ((ds.dppre || ds.dpnav || ds.dpday) && dpClick(t)) return;
@@ -2167,6 +2731,9 @@ document.addEventListener('click', ev => {
   if (ds.proj) { currentProject = ds.proj; LS.set('ao_project', currentProject); selected.clear(); renderAll(); return; }
   if (ds.focus) { focusDay = ds.focus; selected.clear(); renderAll(); return; }
   if (ds.filter) { recFilter = recFilter === ds.filter ? 'all' : ds.filter; renderTodo(); return; }
+  if (ds.recsort) { recSort = ds.recsort; renderTodo(); return; }
+  if (ds.qdpreset) { applyQdPreset(ds.qdpreset); return; }
+  if (ds.pacef) { amFilter = ds.pacef === 'clear' || amFilter === ds.pacef ? 'onspent' : ds.pacef; $('amFilter').value = amFilter; renderAmTable(); return; }
   if (ds.cr) { openCreative(ds.cr); return; }
   if (ds.crsort) { if (crSort.k === ds.crsort) crSort.d = -crSort.d; else crSort = { k: ds.crsort, d: ds.crsort === 'name' || ds.crsort === 'cpr' || ds.crsort === 'rank' ? 1 : -1 }; renderCreativeTable(); return; }
   if (ds.crgroup) { crGroup = ds.crgroup; LS.set('ao_crgroup', crGroup); renderCreativeTable(); return; }
@@ -2195,12 +2762,21 @@ document.addEventListener('click', ev => {
     case 'bulkClear': selected.clear(); renderTodo(); renderBulk(); break;
     case 'amOff': amBulk('off'); break;
     case 'amOn': amBulk('on'); break;
+    case 'amBudget': openBulkBudget(); break;
+    case 'openHW': openHW(); break;
+    case 'hwRetry': if (HW.view === 'hour') EXT.hourlyState = ''; else EXT.dailyState = ''; drawHW(); if (HW.view === 'hour') loadExtHourly(); else loadExtDaily(); break;
+    case 'copyFatigue': copyFatigue(); break;
+    case 'planRetry': EXT.dailyState = ''; renderPlan(); break;
+    case 'goPlan': switchTab('set'); setTimeout(() => { const el = document.querySelector('[data-planb="' + (currentProject === 'ALL' ? 'GD' : currentProject) + '"]'); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 60); break;
+    case 'copyTSV': copyTSV(); break;
     case 'amUp': amBulk('up'); break;
     case 'amDown': amBulk('down'); break;
     case 'amClear': amSel[amLvl].clear(); renderAmTabs(); renderAmTable(); renderBulk(); break;
     case 'bulkApply': confirmActions([...selected].map(key => RECS.find(r => r.key === key)).filter(r => r && r.action && !doneMap[r.key]).map(r => recItem(r))); break;
     case 'clearLog': if (confirm('Xoá toàn bộ nhật ký thao tác?')) { LS.set('ao_log', []); doneMap = {}; renderLog(); } break;
     case 'saveToken': { const v = ($('tokIn').value || '').trim(); if (v.length < 30) { toast('Token không hợp lệ', 'err'); return; } LS.setRaw('meta_access_token', v); demoMode = false; D = null; LS.del('ao_cache'); toast('✓ Đã lưu token, đang tải…', 'ok'); switchTab('todo'); fetchAll(); break; }
+    case 'exportCSV': exportCSV(); break;
+    case 'toggleAutoRefresh': toggleAutoRefresh(); break;
     case 'delToken': LS.del('meta_access_token'); LS.del('ao_cache'); D = null; renderSettings(); renderAll(); break;
     case 'startDemo': demoMode = true; D = null; lastError = ''; switchTab('todo'); fetchAll(); break;
     case 'exitDemo': demoMode = false; D = LS.get('ao_cache', null); doneMap = {}; renderAll(); if (getToken()) fetchAll(); break;
@@ -2271,13 +2847,15 @@ const DEMO = (() => {
     if (st.off) s = di >= 2 ? s : 0;
     if (st.dead3 && di === 0) s = K * 0.6;
     const mult = di === 0 ? (st.mult || 1) : (st.histMult || st.mult || 1);
-    let r = Math.round(s / (K * mult) * (0.85 + 0.3 * rnd('r' + st.id + day)));
+    const wdx = new Date(day + 'T00:00:00Z').getUTCDay(); const wdm = wdx === 0 || wdx === 6 ? 0.78 : wdx === 1 ? 1.12 : 1;
+    let r = Math.round(s / (K * mult) * wdm * (0.85 + 0.3 * rnd('r' + st.id + day)));
     if (st.deadToday && di === 0) r = 0;
     if (st.dead3 && di <= 3) r = 0;
     if (st.small) r = 0;
-    const cpm = st.highcpm ? 175000 : st.lowctr ? 125000 : 55000 + 25000 * rnd('m' + st.id);
+    const tf = st.fatigue ? 1 : (st.id === 's3' || st.id === 's4') ? 0.45 : 0; const rec3 = di <= 3, mid2 = di === 4 || di === 5;
+    const cpm = (st.highcpm ? 175000 : st.lowctr ? 125000 : 55000 + 25000 * rnd('m' + st.id)) * (rec3 ? 1 + 0.3 * tf : 1);
     const imp = Math.round(s / cpm * 1000);
-    const ctr = st.lowctr ? 0.0042 : 0.013 + 0.012 * rnd('c' + st.id);
+    const ctr = (st.lowctr ? 0.0042 : 0.013 + 0.012 * rnd('c' + st.id)) * (rec3 ? 1 - 0.42 * tf : mid2 ? 1 - 0.12 * tf : 1);
     const lc = Math.round(imp * ctr);
     return { s: Math.round(s), r, imp, lc, clk: Math.round(lc * 1.7) };
   }
@@ -2343,6 +2921,25 @@ const DEMO = (() => {
           if (params.level === 'adset') out.push({ adset_id: st.id, reach: '10000', frequency: String(f) });
           else [1, 2].forEach(n => out.push({ ad_id: st.id + 'a' + n, reach: '5000', frequency: String(st.fatigue && n === 1 ? 3.9 : f) }));
         }));
+        return out;
+      }
+      if (params.level === 'campaign') {
+        const cdays = daysFromRange(params.time_range);
+        const hourly = String(params.breakdowns || '').indexOf('hourly') >= 0;
+        const HWT = [1, .6, .4, .3, .3, .5, 1.5, 3, 4, 4.5, 4.5, 4.5, 5, 5, 4.5, 4.5, 4.5, 5, 5.5, 6.5, 7, 7, 6, 4];
+        const HRM = [.55, .5, .5, .5, .55, .7, .95, 1.05, 1.1, 1.05, 1, .95, .85, .85, .95, 1, 1, 1.05, 1.1, 1.2, 1.3, 1.3, 1.15, .8];
+        const KS = ['s', 'r', 'imp', 'lc', 'clk'];
+        allCamps.forEach(c => {
+          const byDay = {};
+          c.sets.forEach(st => cdays.forEach(day => { const di = Math.round((Date.parse(vnDayD(0)) - Date.parse(day)) / 864e5); const m = setDay(c, st, di, day); if (!m.s) return; const a = byDay[day] || (byDay[day] = { s: 0, r: 0, imp: 0, lc: 0, clk: 0 }); KS.forEach(k2 => { a[k2] += m[k2]; }); }));
+          if (!hourly) { Object.entries(byDay).forEach(([day, m]) => out.push(row(m, { campaign_id: c.id, campaign_name: c.name }, day))); return; }
+          const tot = { s: 0, r: 0, imp: 0, lc: 0, clk: 0 }; Object.values(byDay).forEach(m => KS.forEach(k2 => { tot[k2] += m[k2]; }));
+          if (!tot.s) return;
+          const sw = HWT.reduce((a, b) => a + b, 0), rw = HWT.reduce((a, b, i) => a + b * HRM[i], 0);
+          HWT.forEach((w, h) => { const sh = w / sw; const hh = String(h).padStart(2, '0');
+            const m = { s: Math.round(tot.s * sh), r: Math.round(tot.r * w * HRM[h] / rw), imp: Math.round(tot.imp * sh), lc: Math.round(tot.lc * sh * (0.8 + 0.3 * HRM[h])), clk: Math.round(tot.clk * sh) };
+            out.push(row(m, { campaign_id: c.id, campaign_name: c.name, hourly_stats_aggregated_by_advertiser_time_zone: hh + ':00:00 - ' + hh + ':59:59' }, cdays[cdays.length - 1])); });
+        });
         return out;
       }
       const days = daysFromRange(params.time_range);
@@ -16754,9 +17351,7 @@ if (document.readyState === 'loading') {
       pagination.innerHTML = pagHtml;
     }
 
-    if (typeof initPowerBI === 'function') {
-        initPowerBI();
-    }
+    // Power BI loads lazily when user clicks the tab (see switchTab)
 </script>
 </body>
 </html>
