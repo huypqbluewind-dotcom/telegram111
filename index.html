@@ -709,7 +709,7 @@ let focusDay = null;          // 'today' | 'yesterday'
 let perfWin = 'today', perfLvl = 'campaign', perfSortKey = 's', perfQuery = '', perfActiveOnly = true;
 let recFilter = 'all';
 let recSort = 'priority'; // 'priority' | 'spend' | 'cpr'
-let autoRefreshInterval = 0;   // minutes; 0 = off
+let autoRefreshInterval = 0;   // minutes; 0 = off (loaded from LS on boot)
 let autoRefreshTimer = null;
 let activeQdPreset = null;     // which quick-date preset is selected
 let D = null;                 // dữ liệu đã chuẩn hoá
@@ -1406,18 +1406,40 @@ function runEngine() {
   // mốc so sánh theo dự án
   const base = {};
   ['GD', 'AI', 'TT'].forEach(p => {
-    const cpms = []; let r = 0, lc = 0;
+    const cpms = [], ctrs = []; let r = 0, lc = 0;
     Object.values(D.adsets).forEach(a => {
       if (a.project !== p) return;
       const t = agg(D.ins.adset[a.id], T);
-      r += t.r; lc += t.lc; if (t.imp >= 1000) cpms.push(t.cpm);
+      r += t.r; lc += t.lc; if (t.imp >= 1000) cpms.push(t.cpm); if (t.imp >= 500) ctrs.push(t.ctrL);
     });
-    cpms.sort((a, b) => a - b);
-    base[p] = { cr: lc >= 50 ? r / lc * 100 : 0, cpmMed: cpms.length >= 3 ? cpms[Math.floor(cpms.length / 2)] : 0 };
+    cpms.sort((a, b) => a - b); ctrs.sort((a, b) => a - b);
+    base[p] = { cr: lc >= 50 ? r / lc * 100 : 0, cpmMed: cpms.length >= 3 ? cpms[Math.floor(cpms.length / 2)] : 0, ctrMed: ctrs.length >= 3 ? ctrs[Math.floor(ctrs.length / 2)] : 0 };
+  });
+
+  // mặt bằng 3 ngày theo TÀI KHOẢN quảng cáo (dùng để so sánh content mới)
+  const accBase = {};
+  Object.values(D.adsets).forEach(a => {
+    if (!inScope(a.project)) return;
+    const acc = a.accId; if (!acc) return;
+    const rv = agg(D.ins.adset[a.id], R);
+    if (!accBase[acc]) accBase[acc] = { cpms: [], ctrs: [], cpcs: [] };
+    if (rv.imp >= 500) { accBase[acc].cpms.push(rv.cpm); accBase[acc].ctrs.push(rv.ctrL); }
+    if (rv.lc >= 20) accBase[acc].cpcs.push(rv.cpc);
+  });
+  Object.keys(accBase).forEach(acc => {
+    const b = accBase[acc];
+    [b.cpms, b.ctrs, b.cpcs].forEach(arr => arr.sort((x, y) => x - y));
+    b.cpmMed = b.cpms.length >= 2 ? b.cpms[Math.floor(b.cpms.length / 2)] : 0;
+    b.ctrMed = b.ctrs.length >= 2 ? b.ctrs[Math.floor(b.ctrs.length / 2)] : 0;
+    b.cpcMed = b.cpcs.length >= 2 ? b.cpcs[Math.floor(b.cpcs.length / 2)] : 0;
   });
 
   const killAdsets = new Set();
   const cboGroups = {};
+
+  // Feature 1: đọc cooldown map một lần trước vòng lặp adset
+  const cooldownMap = LS.get('ao_cooldown', {});
+  const COOLDOWN_MS = 48 * 3600 * 1000;
 
   Object.values(D.adsets).forEach(as => {
     if (!as.active || !inScope(as.project)) return;
@@ -1431,6 +1453,11 @@ function runEngine() {
     const isCBO = bt && bt.type === 'campaign';
     if (isCBO) (cboGroups[bt.id] = cboGroups[bt.id] || { bt, as: [] }).as.push(as);
 
+    // Feature 1: kiểm tra cooldown — bỏ qua kill/cut/scale 48h sau khi thay đổi NS
+    const cdTs = cooldownMap[as.id];
+    const inCooldown = cdTs && (Date.now() - cdTs < COOLDOWN_MS);
+    const cdHoursLeft = inCooldown ? Math.ceil((COOLDOWN_MS - (Date.now() - cdTs)) / 3600000) : 0;
+
     // tín hiệu phụ
     const sig = [];
     if (f7.freq >= S.freqMax) sig.push(`Tần suất 7 ngày ${f7.freq.toFixed(1).replace('.', ',')} — khách đã thấy lặp lại nhiều, nên làm creative mới.`);
@@ -1438,33 +1465,100 @@ function runEngine() {
     if (b.cr > 0 && t.r > 0 && t.lc >= 40 && t.cr < b.cr * 0.5) sig.push(`${t.lc} click nhưng tỷ lệ ra kết quả ${pct(t.cr)} (TB dự án ${pct(b.cr)}) — kiểm tra landing page/form, tốc độ tải trang.`);
     if (b.cpmMed > 0 && K > 0 && t.cpm > b.cpmMed * 2 && t.s >= K * 0.5) sig.push(`CPM ${k(t.cpm)} gấp ${xf(t.cpm / b.cpmMed)} mức chung — tệp hẹp hoặc bị cạnh tranh, thử mở rộng tệp.`);
     if (today && hourVN >= 12 && as.daily_budget > 0 && t.s < as.daily_budget * ef * 0.3) sig.push(`Tiêu chậm: mới ${k(t.s)}/${k(as.daily_budget)} (dự kiến ~${k(as.daily_budget * ef)} giờ này) — kiểm tra duyệt QC, giá thầu, tệp quá nhỏ.`);
+    // Feature 3: Zero spend / 0 impression sau 12h trưa (khác slow spend — đây là lỗi phân phối)
+    if (today && hourVN >= 12 && t.imp === 0 && t.s === 0) sig.push(`⚡ Không có impression nào từ sáng đến ${hourVN}h — nguy cơ creative bị từ chối, giá thầu quá thấp hoặc tệp bị lỗi. Vào Ads Manager kiểm tra ngay.`);
+    // Feature 2: CPR leo dốc 3 ngày liên tiếp (trend alert)
+    if (K > 0) {
+      const ydIdx2 = today ? 1 : 2; const yd2Idx2 = today ? 2 : 3;
+      const ydM = D.days[ydIdx2] ? agg(e, [D.days[ydIdx2]]) : null;
+      const yd2M = D.days[yd2Idx2] ? agg(e, [D.days[yd2Idx2]]) : null;
+      if (yd2M && ydM && yd2M.r > 0 && ydM.r > 0 && t.r > 0 &&
+          t.s >= K * 0.3 && // đủ spend để tránh nhiễu
+          yd2M.cpr * 1.2 < ydM.cpr && ydM.cpr * 1.2 < t.cpr) {
+        sig.push(`📈 CPR leo dốc 3 ngày liên tiếp: ${k(yd2M.cpr)} → ${k(ydM.cpr)} → ${k(t.cpr)} — cần xem lại tệp, creative bão hoà hoặc đối thủ tăng đấu thầu.`);
+      }
+    }
 
     let rec = null;
     if (K > 0) {
-      const proven = r.r >= 2 && r.cpr <= K * 1.1;
-      const killAt = K * (S.killX + (proven ? 1 : 0));
-      if (t.r === 0 && t.s >= killAt) {
-        rec = { type: 'kill', title: 'TẮT NHÓM', badge: `Đốt ${xf(t.s / K)} mục tiêu`, impact: t.s,
-          reasons: [`Đã tiêu ${vnd(t.s)} (≈ ${xf(t.s / K)} CPR mục tiêu ${k(K)}) mà chưa có kết quả nào.`,
-            proven ? `Lịch sử 3 ngày trước vẫn tốt (CPR ${k(r.cpr)}) nên app đã nới ngưỡng lên ${S.killX + 1}× trước khi đề xuất tắt.` : (r.s > 0 ? `3 ngày trước: tiêu ${k(r.s)}, ${r.r} kết quả${r.r ? ', CPR ' + k(r.cpr) : ''} — không có lý do để chờ thêm.` : 'Nhóm mới, chưa có lịch sử tốt để giữ lại.')],
-          action: { kind: 'pause', id: as.id, type: 'adset', name: as.name },
-          alts: bt && !isCBO ? [budgetAction(bt, -50, as.name)] : [] };
-      } else if (r.r === 0 && r.s >= 3 * K && t.r === 0 && t.s >= 0.3 * K) {
-        rec = { type: 'kill', title: 'TẮT NHÓM', badge: '3 ngày 0 kết quả', impact: r.s + t.s,
-          reasons: [`3 ngày trước tiêu ${vnd(r.s)} (≈ ${xf(r.s / K)} mục tiêu) không ra kết quả nào, ${today ? 'hôm nay' : 'hôm qua'} tiếp tục ${k(t.s)} vẫn 0.`],
-          action: { kind: 'pause', id: as.id, type: 'adset', name: as.name }, alts: [] };
-      } else if (t.r > 0 && t.cpr >= 2 * K && t.s >= 3 * K && (r.r === 0 || r.cpr >= 1.5 * K)) {
-        rec = { type: 'kill', title: 'TẮT NHÓM', badge: `CPR ${xf(t.cpr / K)} mục tiêu`, impact: t.s - t.r * K,
-          reasons: [`CPR ${vnd(t.cpr)} — gấp ${xf(t.cpr / K)} mục tiêu, đã tiêu ${k(t.s)}.`, r.r ? `3 ngày trước cũng đắt (CPR ${k(r.cpr)}) — không phải biến động 1 ngày.` : '3 ngày trước không có kết quả.'],
-          action: { kind: 'pause', id: as.id, type: 'adset', name: as.name },
-          alts: bt && !isCBO ? [budgetAction(bt, -50, as.name)] : [] };
-      } else if (bt && !isCBO && t.s >= 1.5 * K && (t.r === 0 || t.cpr > S.cutX * K) && (r.r === 0 || r.cpr > S.cutX * K * 0.92)) {
-        rec = { type: 'cut', title: `GIẢM ${S.downPct}% NGÂN SÁCH`, badge: t.r ? `CPR ${xf(t.cpr / K)} mục tiêu` : 'Chưa ra số', impact: t.s,
-          reasons: [t.r ? `CPR ${vnd(t.cpr)} cao hơn mục tiêu ${pct((t.cpr / K - 1) * 100, 0)} (đã tiêu ${k(t.s)}, ${t.r} kết quả).` : `Đã tiêu ${vnd(t.s)} chưa ra kết quả (chưa tới ngưỡng tắt ${S.killX}×).`,
-            r.r ? `3 ngày trước CPR ${k(r.cpr)} — cũng trên mục tiêu, giảm để hạn chế thiệt hại nhưng vẫn giữ nhóm học tiếp.` : '3 ngày trước cũng chưa có kết quả.'],
-          action: budgetAction(bt, -S.downPct, as.name),
-          alts: [{ kind: 'pause', id: as.id, type: 'adset', name: as.name }] };
-      } else if (bt && !isCBO && t.r >= 2 && t.cpr <= S.scaleX * K && ((r.r >= 2 && r.cpr <= K * 1.1) || (t.r >= 4 && t.cpr <= 0.6 * K))) {
+      // Feature 1: nếu đang trong cooldown 48h → bỏ qua kill/cut/scale
+      if (inCooldown) {
+        OKS.push({ ent, t, r, K, note: `Vừa điều chỉnh NS — đang học lại (còn ${cdHoursLeft}h)`, dot: '🔵' });
+        return;
+      }
+      const ab = accBase[as.accId] || {};
+      const isNewGroup = r.s < K * 0.5; // nhóm mới = lịch sử 3 ngày trước chưa tiêu đủ 0.5 CPR
+      const killPauseAct = { kind: 'pause', id: as.id, type: 'adset', name: as.name };
+
+      if (isNewGroup) {
+        // RULE 1: Nhóm mới tiêu ≥150k, 0 KQ, chỉ số xấu hơn mặt bằng tài khoản 3 ngày → Tắt
+        if (!rec && t.s >= 150000 && t.r === 0) {
+          const ctrBad = ab.ctrMed > 0 && t.imp >= 500 && t.ctrL < ab.ctrMed * 0.65;
+          const cpmBad = ab.cpmMed > 0 && t.imp >= 500 && t.cpm  > ab.cpmMed * 1.7;
+          const cpcBad = ab.cpcMed > 0 && t.lc  >= 10  && t.cpc  > ab.cpcMed * 1.7;
+          if (ctrBad || cpmBad || cpcBad) {
+            const issues = [];
+            if (ctrBad) issues.push(`CTR link ${pct(t.ctrL)} (TB tài khoản: ${pct(ab.ctrMed)}, thấp hơn 35%)`);
+            if (cpmBad) issues.push(`CPM ${k(t.cpm)} (TB tài khoản: ${k(ab.cpmMed)}, cao hơn 70%)`);
+            if (cpcBad) issues.push(`CPC ${k(t.cpc)} (TB tài khoản: ${k(ab.cpcMed)}, cao hơn 70%)`);
+            rec = { type: 'kill', title: 'TẮT – NHÓM MỚI CHỈ SỐ XẤU', badge: `${k(t.s)} · 0 KQ`,
+              impact: t.s,
+              reasons: [
+                `Nhóm mới tiêu ${k(t.s)}, chưa có kết quả. Chỉ số kém hơn mặt bằng tài khoản (3 ngày qua): ${issues.join('; ')}.`,
+                `Nên tắt sớm — content/tệp này không phù hợp với tài khoản đang chạy, tiếp tục sẽ lãng phí ngân sách.`
+              ],
+              action: killPauseAct, alts: [] };
+          }
+        }
+        // RULE 2: Nhóm mới đã qua 2 ngày, chỉ số OK nhưng vẫn 0 KQ → Tắt
+        if (!rec) {
+          const ydIdx = today ? 1 : 2;
+          const yd2 = D.days[ydIdx] ? agg(D.ins.adset[as.id], [D.days[ydIdx]]) : null;
+          if (yd2 && yd2.s > 0 && t.r === 0 && yd2.r === 0) {
+            const total2s = (t.s || 0) + (yd2.s || 0);
+            rec = { type: 'kill', title: 'TẮT – NHÓM MỚI HẾT NGÀY 2', badge: `${k(total2s)} · 0 KQ`,
+              impact: total2s,
+              reasons: [
+                `Nhóm mới đã chạy qua 2 ngày (ngày trước tiêu ${k(yd2.s)}, ${today ? 'hôm nay' : 'ngày đang xét'} tiêu ${k(t.s)}), tổng ${k(total2s)} — chưa có kết quả nào.`,
+                `Sau 2 ngày không ra là đủ tín hiệu để dừng: Meta đã có thời gian học, nếu content phù hợp thường ra kết quả trong ngày đầu.`
+              ],
+              action: killPauseAct, alts: [] };
+          }
+        }
+      } else {
+        // RULE 3: Nhóm cũ, 3 ngày tổng ≥400k, 0 KQ → Tắt
+        const total3s = (t.s || 0) + (r.s || 0);
+        const total3r = (t.r || 0) + (r.r || 0);
+        if (!rec && total3s >= 400000 && total3r === 0) {
+          rec = { type: 'kill', title: 'TẮT – 3 NGÀY KHÔNG RA KQ', badge: `${k(total3s)} · 0 KQ`,
+            impact: total3s,
+            reasons: [
+              `Tổng 3 ngày (3 ngày trước ${k(r.s)} + ${today ? 'hôm nay' : 'hôm qua'} ${k(t.s)}) = ${k(total3s)}, không có kết quả nào.`,
+              `Nhóm đã chạy đủ lâu để Meta học — không ra sau 3 ngày là tín hiệu rõ ràng cần dừng.`
+            ],
+            action: killPauseAct, alts: [] };
+        }
+        // RULE 4: Nhóm cũ, CPR ngày > 300k và đã tiêu đủ → Tắt
+        if (!rec && t.r > 0 && t.cpr > 300000 && t.s >= K * 1.2) {
+          rec = { type: 'kill', title: 'TẮT – CPR NGÀY QUÁ CAO', badge: `CPR ${k(t.cpr)}`,
+            impact: t.s - t.r * K,
+            reasons: [
+              `CPR ${vnd(t.cpr)} — gấp ${xf(t.cpr / K)} mục tiêu ${k(K)}, đã tiêu ${k(t.s)} với ${t.r} kết quả.`,
+              r.r ? `3 ngày trước: ${r.r} KQ, CPR ${k(r.cpr)} — ${r.cpr > K * 1.5 ? 'cũng đắt, không phải 1 ngày xui.' : 'từng tốt hơn nhưng đang xuống dốc.'}` : '3 ngày trước cũng không có kết quả.'
+            ],
+            action: killPauseAct, alts: [] };
+        }
+        // Giảm ngân sách cho nhóm cũ ABO nếu chưa đến ngưỡng tắt
+        if (!rec && bt && !isCBO && t.s >= 1.5 * K && (t.r === 0 || t.cpr > S.cutX * K) && (r.r === 0 || r.cpr > S.cutX * K * 0.92)) {
+          rec = { type: 'cut', title: `GIẢM ${S.downPct}% NGÂN SÁCH`, badge: t.r ? `CPR ${xf(t.cpr / K)} mục tiêu` : 'Chưa ra số', impact: t.s,
+            reasons: [t.r ? `CPR ${vnd(t.cpr)} cao hơn mục tiêu ${pct((t.cpr / K - 1) * 100, 0)} (đã tiêu ${k(t.s)}, ${t.r} kết quả).` : `Đã tiêu ${vnd(t.s)} chưa ra kết quả (chưa tới ngưỡng tắt).`,
+              r.r ? `3 ngày trước CPR ${k(r.cpr)} — cũng trên mục tiêu.` : '3 ngày trước cũng chưa có kết quả.'],
+            action: budgetAction(bt, -S.downPct, as.name),
+            alts: [killPauseAct] };
+        }
+      }
+      // SCALE: cả nhóm mới & cũ, chỉ áp dụng ABO
+      if (!rec && bt && !isCBO && t.r >= 2 && t.cpr <= S.scaleX * K && t.s >= K * 0.8 && ((r.r >= 2 && r.cpr <= K * 1.1) || (t.r >= 4 && t.cpr <= 0.6 * K))) {
         if (f7.freq >= S.freqMax) {
           rec = { type: 'watch', title: 'NHÂN BẢN, ĐỪNG TĂNG', badge: 'Tần suất cao', impact: t.r,
             reasons: [`CPR ${vnd(t.cpr)} rất tốt nhưng tần suất 7 ngày đã ${f7.freq.toFixed(1).replace('.', ',')} — tăng ngân sách lúc này dễ làm CPR tăng vọt.`, 'Nên nhân bản nhóm sang tệp mới / lookalike thay vì tăng ngân sách nhóm cũ.'] };
@@ -1512,6 +1606,30 @@ function runEngine() {
         reasons: [t.r ? `Cả chiến dịch CPR ${vnd(t.cpr)} (đã tiêu ${k(t.s)}).` : `Cả chiến dịch tiêu ${vnd(t.s)} chưa ra kết quả.`, 'Với CBO, nên tắt bớt nhóm kém trước (xem đề xuất cấp nhóm), rồi mới giảm ngân sách chiến dịch.'],
         action: budgetAction(g.bt, -S.downPct, c.name), alts: [{ kind: 'pause', id: cid, type: 'campaign', name: c.name }] };
     }
+    // Feature 4: CBO budget concentration — 1 nhóm xấu đang hút >50% ngân sách CBO
+    const cboConcentration = [];
+    g.as.forEach(as2 => {
+      if (killAdsets.has(as2.id)) return; // đã có rec tắt rồi, bỏ qua
+      if (!as2.active) return; // nhóm đã tắt không tính
+      const as2T = agg(D.ins.adset[as2.id], T);
+      const pctShare = t.s > 0 ? as2T.s / t.s : 0;
+      if (pctShare >= 0.5 && as2T.r === 0 && as2T.s >= K * 0.3) {
+        cboConcentration.push(`"${as2.name}" hút ${Math.round(pctShare * 100)}% NS CBO (${k(as2T.s)}) nhưng 0 kết quả`);
+      }
+    });
+    if (cboConcentration.length) {
+      const concRec = {
+        type: 'watch',
+        title: '⚠️ CBO MẤT CÂN BẰNG',
+        badge: 'Tập trung ngân sách',
+        impact: t.s,
+        reasons: [
+          `Chiến dịch CBO đang phân bổ NS không đều — ${cboConcentration.join('; ')}.`,
+          'Meta đang ưu tiên nhóm kém và không chuyển đổi. Cân nhắc tắt nhóm đó hoặc kiểm tra creative để Meta phân bổ lại.'
+        ]
+      };
+      RECS.push(Object.assign(concRec, { ent, t, r, l: emptyM(), f7: {}, K, budget: null, key: 'watch|cbo-conc|' + cid + '|' + T[0] }));
+    }
     if (rec) RECS.push(Object.assign(rec, { ent, t, r, l: emptyM(), f7: {}, K, budget: g.bt, key: rec.type + '|campaign|' + cid + '|' + T[0] }));
   });
 
@@ -1538,6 +1656,17 @@ function runEngine() {
         rec = { type: 'watch', title: 'MẪU BỊ BÃO HOÀ', badge: 'Tần suất ' + x.f7.freq.toFixed(1).replace('.', ','), impact: x.t.s,
           reasons: [`Tần suất 7 ngày ${x.f7.freq.toFixed(1).replace('.', ',')} — nên thay hình/video mới cho mẫu này.`] };
       }
+      // Feature 5: Creative decay — CTR hôm nay thấp hơn 40% so với TB 7 ngày (chỉ khi ad data đã load)
+      if (!rec && D.adsReady) {
+        const adL = agg(D.ins.ad[x.ad.id], L);
+        if (adL.imp >= 3000 && adL.ctrL > 0 && x.t.imp >= 500 && x.t.ctrL < adL.ctrL * 0.6) {
+          rec = { type: 'watch', title: '📉 CREATIVE SUY GIẢM', badge: `CTR hôm nay thấp hơn TB 7 ngày ${Math.round((1 - x.t.ctrL / adL.ctrL) * 100)}%`, impact: x.t.s,
+            reasons: [
+              `CTR link hôm nay ${pct(x.t.ctrL)} so với TB 7 ngày ${pct(adL.ctrL)} — giảm ${Math.round((1 - x.t.ctrL / adL.ctrL) * 100)}%.`,
+              `Creative đang bão hoà hoặc đối thủ xuất hiện mới. Nên thay hook đầu (3s đầu video / hình thumbnail) hoặc làm biến thể mới.`
+            ] };
+        }
+      }
       if (rec) {
         if (rec.type === 'kill') rec.action = { kind: 'pause', id: x.ad.id, type: 'ad', name: x.ad.name };
         rec.alts = [];
@@ -1545,6 +1674,83 @@ function runEngine() {
       }
     });
   });
+
+  // ---- Theo dõi CONTENT MỚI (check kỹ 1.5 ngày đầu) ----
+  Object.values(D.ads).forEach(ad => {
+    if (!ad.active || !inScope(ad.project)) return;
+    const as = D.adsets[ad.adsetId];
+    if (!as || !as.active) return;
+    const K = targetFor(ad.project).v; if (!K) return;
+    const e_ins = D.ins.ad[ad.id]; if (!e_ins) return;
+
+    const t = agg(e_ins, T);           // hôm nay (hoặc hôm qua nếu focusDay='yesterday')
+    const ydIdx = today ? 1 : 2;       // ngày trước T, tránh trùng với T khi focusDay='yesterday'
+    const yd = D.days[ydIdx] ? agg(e_ins, [D.days[ydIdx]]) : { s: 0, r: 0, imp: 0 };
+    const r_hist = agg(e_ins, R);      // 3 ngày trước T
+    if (!t.s && !yd.s) return;
+
+    // "Content mới" = lịch sử 3 ngày trước còn ít (chưa đủ 0.5× K)
+    const isNew = r_hist.s < K * 0.5;
+    if (!isNew) return;
+
+    // Bỏ qua nếu đã có đề xuất kill/cut/scale cho QC này rồi
+    if (RECS.some(x => x.ent.id === ad.id && !x.key.includes('|new'))) return;
+
+    const b = base[ad.project] || {};
+    const total15 = (yd.s || 0) + (t.s || 0);
+
+    const ent = {
+      level: 'ad', id: ad.id, name: ad.name, accName: ad.accName, accId: ad.accId,
+      sub: 'Nhóm: ' + (as.name || ''), project: ad.project,
+      thumb: ad.thumb, story: ad.story, ig: ad.ig
+    };
+    let rec = null;
+
+    // Trường hợp 1: ~1.5 ngày chạy, đã tiêu >= 1× K, vẫn 0 kết quả
+    if (yd.s >= K * 0.2 && t.s > 0 && total15 >= K && t.r === 0 && yd.r === 0) {
+      rec = {
+        type: 'watch',
+        title: '⏱ CONTENT MỚI – CHƯA RA SỐ',
+        badge: `~1.5 ngày · ${k(total15)} đã tiêu`,
+        impact: total15,
+        reasons: [
+          `Mẫu mới đã chạy ~1.5 ngày, tiêu ${k(total15)} (${xf(total15 / K)}× CPR mục tiêu) nhưng chưa có kết quả nào.`,
+          `Không tắt ngay vì Meta cần thời gian học. Nếu tiếp tục 0 KQ đến ${k(K * S.killX)} sẽ xuất hiện lệnh tắt tự động.`,
+          `Kiểm tra ngay: CTR ${pct(t.ctrL)} · CPM ${k(t.cpm)} — xem hook đầu video/hình, landing page và form có lỗi không?`
+        ]
+      };
+    }
+    // Trường hợp 2: ~1 ngày chạy, chỉ số yếu hơn TB dự án rõ rệt, 0 kết quả
+    else if (yd.s >= K * 0.25 && t.s > 0 && t.r === 0 && yd.r === 0) {
+      const ctrBad = b.ctrMed > 0 && t.imp >= 500 && t.ctrL < b.ctrMed * 0.6;
+      const cpmBad = b.cpmMed > 0 && t.imp >= 500 && t.cpm > b.cpmMed * 1.8;
+      if (ctrBad || cpmBad) {
+        const issues = [];
+        if (ctrBad) issues.push(`CTR ${pct(t.ctrL)} thấp hơn 40% so với TB dự án (${pct(b.ctrMed)})`);
+        if (cpmBad) issues.push(`CPM ${k(t.cpm)} cao hơn 80% so với TB dự án (${k(b.cpmMed)})`);
+        rec = {
+          type: 'watch',
+          title: '⚠️ CONTENT MỚI – CHỈ SỐ YẾU',
+          badge: 'Ngày 1 · dưới trung bình',
+          impact: total15,
+          reasons: [
+            `Mẫu mới đã chạy ~1 ngày (tiêu ${k(total15)}) và chưa có kết quả với dấu hiệu yếu: ${issues.join('; ')}.`,
+            `Cảnh báo sớm — chưa phải lệnh tắt. Nên review hook, hình/video mở đầu và tệp đối tượng trước khi tiếp tục đốt ngân sách.`,
+            `Nếu các mẫu khác trong cùng nhóm đang chạy tốt → cân nhắc tắt mẫu này để dồn ngân sách sang mẫu hiệu quả hơn.`
+          ]
+        };
+      }
+    }
+
+    if (rec) {
+      rec.alts = [];
+      RECS.push(Object.assign(rec, {
+        ent, t, r: r_hist, l: emptyM(), f7: D.f7.ad[ad.id] || { freq: 0 }, K, budget: null,
+        key: rec.type + '|ad|' + ad.id + '|' + T[0] + '|new'
+      }));
+    }
+  });
+  // ---- Kết thúc theo dõi content mới ----
 
   const order = { kill: 0, cut: 1, scale: 2, watch: 3 };
   RECS.sort((a, b) => order[a.type] - order[b.type] || b.impact - a.impact);
@@ -1616,6 +1822,10 @@ async function runActions(items) {
       const entry = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ts: Date.now(), kind: a.kind, eid: a.id, type: a.type, name: a.name, acc: it.acc || '', from: a.from || 0, to: a.to || 0, reason: it.reason || '', snap: snapshotOf(a), demo: demoMode, undone: false };
       log.unshift(entry);
       if (it.recKey) doneMap[it.recKey] = { id: entry.id, label: actionLabel(a), ts: entry.ts };
+      // Feature 1: Cooldown — ghi nhận thời điểm thay đổi ngân sách để ẩn rec 48h sau
+      if ((a.kind === 'set_budget' || a.kind === 'budget_change') && a.type === 'adset' && a.id) {
+        const cd = LS.get('ao_cooldown', {}); cd[a.id] = Date.now(); LS.set('ao_cooldown', cd);
+      }
     } else fails.push((a.name || a.id) + ': ' + res.msg);
   }
   LS.set('ao_log', log.slice(0, 300));
@@ -1798,6 +2008,9 @@ function recCard(r) {
   const budgetLine = r.budget ? `<div class="xs muted" style="margin-top:8px">Ngân sách ${r.budget.type === 'campaign' ? 'CBO' : 'ngày'}: <b style="color:var(--foreground)">${vnd(r.budget.cur)}</b> · CPR mục tiêu ${k(r.K)}</div>` : `<div class="xs muted" style="margin-top:8px">CPR mục tiêu ${k(r.K)}</div>`;
   const acts = [];
   if (!done && r.action) acts.push(`<button class="btn ${r.type === 'watch' ? 'p' : r.type}" data-run="${esc(r.key)}" data-i="-1">${esc(actionLabel(r.action))}</button>`);
+  if (r.type === 'scale' && !done && r.budget) {
+    acts.push(`<span class="manual-bud-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="xs muted">Hoặc nhập tay:</span><input type="number" inputmode="numeric" class="budget-inp" data-bkey="${esc(r.key)}" placeholder="${r.budget.cur}" min="1000" step="1000" style="width:130px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--foreground)"><button class="btn" data-mbud="${esc(r.key)}" style="padding:7px 14px">Áp dụng</button></span>`);
+  }
   if (!done) (r.alts || []).forEach((a, i) => acts.push(`<button class="btn" data-run="${esc(r.key)}" data-i="${i}">${esc(actionLabel(a))}</button>`));
   if (!done && !r.snoozed) acts.push(`<button class="btn ghost" data-snooze="${esc(r.key)}">Để sau</button>`);
   if (r.snoozed) acts.push(`<button class="btn ghost" data-unsnooze="${esc(r.key)}">Đưa lại vào danh sách</button>`);
@@ -2619,31 +2832,31 @@ function applyQdPreset(preset) {
 function syncQdBar() { document.querySelectorAll('.qd').forEach(b => b.classList.toggle('on', b.dataset.qdpreset === PR.preset)); }
 
 // ─── Auto-refresh ────────────────────────────────────────────────────────────
-function setAutoRefresh(minutes) {
+function setAutoRefresh(minutes, silent) {
   if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
   autoRefreshInterval = minutes;
+  LS.set('ao_autoRefresh', minutes); // lưu setting để giữ qua reload
   const btn = document.getElementById('arBtn');
-  if (!btn) return;
+  if (btn) {
+    if (minutes > 0) {
+      btn.textContent = `⏱ ${minutes}p`;
+      btn.classList.remove('off');
+    } else {
+      btn.textContent = '⏱ Tắt';
+      btn.classList.add('off');
+    }
+  }
   if (minutes > 0) {
-    autoRefreshTimer = setInterval(() => { if (D) fetchAll(); }, minutes * 60 * 1000);
-    btn.textContent = `⏱ ${minutes}p`;
-    btn.classList.remove('off');
-    toast(`Tự động làm mới mỗi ${minutes} phút`, 'ok');
+    autoRefreshTimer = setInterval(() => { if (D && !isFetching) fetchAll(); }, minutes * 60 * 1000);
+    if (!silent) toast(`Tự động làm mới mỗi ${minutes} phút`, 'ok');
   } else {
-    btn.textContent = '⏱ Tắt';
-    btn.classList.add('off');
+    if (!silent) toast('Đã tắt tự động làm mới', 'info');
   }
 }
 function toggleAutoRefresh() {
   const opts = [0, 5, 10, 15, 30];
   const cur = opts.indexOf(autoRefreshInterval);
-  const next = opts[(cur + 1) % opts.length];
-  if (next === 0) {
-    setAutoRefresh(0);
-    toast('Đã tắt tự động làm mới', 'info');
-  } else {
-    setAutoRefresh(next);
-  }
+  setAutoRefresh(opts[(cur + 1) % opts.length]);
 }
 
 // ─── Xuất dữ liệu bảng (CSV / copy dán Google Sheet) ─────────────────────────
@@ -2785,7 +2998,7 @@ function switchTab(tab) {
 }
 
 document.addEventListener('click', ev => {
-  const t = ev.target.closest('[data-dppre],[data-dpnav],[data-dpday],[data-cr],[data-crsort],[data-crgroup],[data-amall],[data-amsel],[data-amclr],[data-amtab],[data-amsort],[data-amtog],[data-amdrill],[data-act],[data-tab],[data-proj],[data-focus],[data-filter],[data-recsort],[data-run],[data-snooze],[data-unsnooze],[data-undo],[data-open],[data-win],[data-lvl],[data-sel],[data-qdpreset],[data-pacef]');
+  const t = ev.target.closest('[data-dppre],[data-dpnav],[data-dpday],[data-cr],[data-crsort],[data-crgroup],[data-amall],[data-amsel],[data-amclr],[data-amtab],[data-amsort],[data-amtog],[data-amdrill],[data-act],[data-tab],[data-proj],[data-focus],[data-filter],[data-recsort],[data-run],[data-snooze],[data-unsnooze],[data-undo],[data-open],[data-win],[data-lvl],[data-sel],[data-qdpreset],[data-pacef],[data-mbud]');
   if (!t) { if (ev.target.id === 'ov') closeSheet(); return; }
   const ds = t.dataset;
   if ((ds.dppre || ds.dpnav || ds.dpday) && dpClick(t)) return;
@@ -2814,6 +3027,14 @@ document.addEventListener('click', ev => {
   if (ds.run) {
     const r = RECS.find(x => x.key === ds.run); if (!r) return;
     const i = +ds.i; const a = i < 0 ? r.action : r.alts[i];
+    confirmActions([recItem(r, a)]); return;
+  }
+  if (ds.mbud) {
+    const r = RECS.find(x => x.key === ds.mbud); if (!r || !r.budget) return;
+    const inp = document.querySelector(`[data-bkey="${CSS.escape(ds.mbud)}"]`);
+    const val = inp ? +inp.value : 0;
+    if (!val || val < 1000) { toast('Nhập số ngân sách hợp lệ (tối thiểu 1.000 đ)', 'err'); return; }
+    const a = { kind: 'set_budget', id: r.budget.id, type: r.budget.type, name: r.ent.name, value: val };
     confirmActions([recItem(r, a)]); return;
   }
   switch (ds.act) {
@@ -3027,6 +3248,10 @@ const DEMO = (() => {
 
 
 // Tá»± Ä‘á»™ng táº£i dá»¯ liá»‡u khi náº¡p trang
+// Khởi động auto-refresh từ setting đã lưu (mặc định 5 phút nếu chưa cài)
+const _savedAR = LS.get('ao_autoRefresh', 5);
+setAutoRefresh(_savedAR, true); // silent=true, không toast khi khởi động
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => { bootFromCache().then(fetchAll); });
 } else {
@@ -3411,6 +3636,13 @@ if (document.readyState === 'loading') {
       renderPowerBITable();
     }
 
+    function changePowerBIPage(page) {
+      const totalPages = window.__pbiTotalPages || 1;
+      if (page < 1 || page > totalPages) return;
+      pbiCurrentPage = page;
+      renderPowerBITable();
+    }
+
     function renderPowerBITable() {
       const tbody = document.getElementById('pbi-campaigns-table-body');
       const countLabel = document.getElementById('pbi-campaign-count-label');
@@ -3547,6 +3779,7 @@ if (document.readyState === 'loading') {
       tbody.innerHTML = rowsHtml;
       if (infoLabel) infoLabel.innerText = 'Hiển thị ' + (startIdx + 1) + ' - ' + Math.min(startIdx + pbiPageSize, filtered.length) + ' / ' + filtered.length + ' chiến dịch';
 
+      window.__pbiTotalPages = totalPages;
       renderPaginationControls(pagination, totalPages);
     }
 
