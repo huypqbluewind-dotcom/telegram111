@@ -149,6 +149,45 @@ table.w th:first-child,table.w td:first-child{text-align:left}
 .banner.err{background:var(--kill-bg);border:1px solid var(--kill-bd);color:#fecdd3}
 .banner.info{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.35);color:#bfdbfe}
 details summary{cursor:pointer;list-style:none} details summary::-webkit-details-marker{display:none}
+
+/* anomaly center */
+.anomaly-wrap{margin-top:12px}
+.anomaly-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px}
+.anomaly-card .ahd{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer}
+.anomaly-card.crit .ahd{background:var(--kill-bg)}
+.anomaly-card.warn .ahd{background:var(--cut-bg)}
+.anomaly-card.info .ahd{background:rgba(96,165,250,.08)}
+.anomaly-card .aicon{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex:none}
+.anomaly-card.crit .aicon{background:rgba(244,63,94,.18);color:var(--kill)}
+.anomaly-card.warn .aicon{background:rgba(245,158,11,.18);color:var(--cut)}
+.anomaly-card.info .aicon{background:rgba(96,165,250,.18);color:var(--blue)}
+.anomaly-card .atitle{font-weight:700;font-size:13px;line-height:1.3}
+.anomaly-card.crit .atitle{color:var(--kill)} .anomaly-card.warn .atitle{color:var(--cut)} .anomaly-card.info .atitle{color:var(--blue)}
+.anomaly-card .abd{padding:10px 12px 12px}
+.anomaly-card .ametrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:6px;margin-top:8px}
+.anomaly-card .amet{background:var(--secondary);border-radius:8px;padding:6px 8px}
+.anomaly-card .amet .al{font-size:10.5px;color:var(--muted-foreground)} .anomaly-card .amet .av{font-size:12px;font-weight:700;margin-top:1px}
+.anomaly-card .areason{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.03);font-size:12.5px;line-height:1.55;color:#cbd5e1;border:1px solid var(--border)}
+.anomaly-card .areason b{color:var(--foreground)}
+.anomaly-card .aaction{margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(59,130,246,.06);font-size:12.5px;line-height:1.55;color:#93c5fd;border:1px solid rgba(59,130,246,.2)}
+.anomaly-card .aaction b{color:#60a5fa}
+.anomaly-cnt{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+.anomaly-cnt.crit{background:rgba(244,63,94,.18);color:var(--kill)}
+.anomaly-cnt.warn{background:rgba(245,158,11,.18);color:var(--cut)}
+.anomaly-cnt.info{background:rgba(96,165,250,.18);color:var(--blue)}
+.anomaly-acc-btn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s}
+.anomaly-acc-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.anomaly-acc-btn:not(.active):hover{background:var(--bg3,var(--border))}
+
+/* budget history */
+.bhist-row{padding:10px 0;border-bottom:1px solid var(--border)}
+.bhist-row:last-child{border-bottom:none}
+.bhist-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px}
+.bhist-badge.learning{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
+.bhist-badge.stable{background:rgba(16,185,129,.12);color:var(--scale);border:1px solid rgba(16,185,129,.3)}
+.bhist-badge.recent{background:rgba(245,158,11,.12);color:var(--cut);border:1px solid rgba(245,158,11,.3)}
+.bhist-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;margin-top:6px;font-size:12px}
+.bhist-metrics .bl{color:var(--muted-foreground)}.bhist-metrics .bv{font-weight:700}
 @media(min-width:640px){.kgrid{grid-template-columns:repeat(6,1fr)} .mgrid{grid-template-columns:repeat(4,1fr)}}
 
 /* ===== Trình quản lý quảng cáo ===== */
@@ -307,6 +346,8 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
       <span id="focusNote" class="xs muted" style="text-align:right"></span>
     </div>
     <div id="healthCard"></div>
+    <div id="anomalyBox"></div>
+    <div id="budgetHistoryBox"></div>
     <div id="planBox"></div>
     <div id="chipsBox" style="margin-top:12px"></div>
     <div id="recList" style="margin-top:12px"></div>
@@ -857,6 +898,442 @@ async function copyFatigue() {
     + '\n\n→ Cần mẫu mới cùng thông điệp/ưu đãi, đổi hook mở đầu và hình chính.';
   try { await navigator.clipboard.writeText(txt); } catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
   toast('✓ Đã copy danh sách — dán vào nhóm chat với designer', 'ok');
+}
+
+// ---------- (3.5) TRUNG TÂM PHÁT HIỆN BẤT THƯỜNG ----------
+let ANOMALIES = [];
+function detectAnomalies() {
+  ANOMALIES = [];
+  if (!D || !D.days || D.days.length < 8) return;
+  const today = focusDay === 'today';
+  const T = today ? [D.days[0]] : [D.days[1]];
+  const L7 = D.days.slice(1, 8);
+  const ef = today ? expectedFrac() : 1;
+
+  // Phát hiện bất thường cho từng adset đang chạy
+  Object.values(D.adsets).forEach(as => {
+    if (!as.active || !inScope(as.project)) return;
+    const e = D.ins.adset[as.id];
+    const cur = agg(e, T);
+    const avg = agg(e, L7);
+
+    // Chuẩn hoá avg cho so sánh: chia 7 ngày -> quy ra 1 ngày
+    const avg1 = { s: avg.s / 7, r: avg.r / 7, imp: avg.imp / 7, lc: avg.lc / 7,
+      cpr: avg.cpr, cpm: avg.cpm, cpc: avg.cpc, ctrL: avg.ctrL, cr: avg.cr };
+
+    // Cần đủ dữ liệu để so sánh có ý nghĩa
+    if (avg.imp < 3000 || avg.s < 50000) return; // quá ít data 7 ngày
+    const hasToday = today ? cur.imp > 0 || cur.s > 0 : true;
+    if (!hasToday && today) return;
+
+    // Nếu đang xem "hôm nay" và chưa qua nửa ngày, quy đổi số liệu theo expectedFrac
+    const adjCur = today && ef > 0.15 ? {
+      s: cur.s / ef, r: cur.r / ef, imp: cur.imp / ef, lc: cur.lc / ef,
+      cpr: cur.cpr, cpm: cur.cpm, cpc: cur.cpc, ctrL: cur.ctrL, cr: cur.cr
+    } : cur;
+    // Chỉ so sánh rate-based metrics trực tiếp (CPM, CPR, CPC, CTR, CR), ko cần quy đổi
+
+    const K = targetFor(as.project).v;
+    const entName = as.name;
+    const accName = as.accName;
+
+    // --- 1. CPM tăng mạnh ---
+    if (cur.imp >= 500 && avg.cpm > 0 && cur.cpm > avg.cpm * 1.2) {
+      const pctUp = Math.round((cur.cpm / avg.cpm - 1) * 100);
+      if (pctUp >= 20) {
+        const sev = pctUp >= 40 ? 'crit' : 'warn';
+        ANOMALIES.push({
+          sev, icon: '📈', type: 'cpm_up',
+          title: `CPM tăng ${pctUp}%`,
+          entity: entName, acc: accName, accId: as.accId, asId: as.id, project: as.project,
+          metrics: [
+            { l: 'CPM hiện tại', v: k(cur.cpm) },
+            { l: 'CPM TB 7N', v: k(avg.cpm) },
+            { l: 'Mức tăng', v: '+' + pctUp + '%' },
+            { l: 'Impression', v: nf.format(Math.round(cur.imp)) }
+          ],
+          reason: `CPM tăng ${pctUp}% so với trung bình 7 ngày.` +
+            (cur.ctrL < avg.ctrL * 0.85 ? ` CTR cũng giảm (${pct(cur.ctrL)} vs TB ${pct(avg.ctrL)}) — có thể do tệp đối tượng bão hoà hoặc cạnh tranh đấu giá tăng.` :
+             ` CTR vẫn ổn định — khả năng do cạnh tranh đấu giá tăng hoặc thay đổi tệp nhắm mục tiêu.`) +
+            ' Đây là nhận định có khả năng xảy ra, cần kiểm tra thêm dữ liệu đấu giá và tệp.',
+          action: '🔍 Kiểm tra: giá thầu, tệp đối tượng (có quá hẹp không), vị trí hiển thị (placement), và mức cạnh tranh trong ngành.'
+        });
+      }
+    }
+
+    // --- 2. CTR giảm ---
+    if (cur.imp >= 800 && avg.ctrL > 0 && cur.ctrL < avg.ctrL * 0.8) {
+      const pctDown = Math.round((1 - cur.ctrL / avg.ctrL) * 100);
+      if (pctDown >= 15) {
+        const sev = pctDown >= 30 ? 'crit' : 'warn';
+        ANOMALIES.push({
+          sev, icon: '📉', type: 'ctr_down',
+          title: `CTR giảm ${pctDown}%`,
+          entity: entName, acc: accName, accId: as.accId, asId: as.id, project: as.project,
+          metrics: [
+            { l: 'CTR hiện tại', v: pct(cur.ctrL) },
+            { l: 'CTR TB 7N', v: pct(avg.ctrL) },
+            { l: 'Mức giảm', v: '−' + pctDown + '%' },
+            { l: 'Impression', v: nf.format(Math.round(cur.imp)) }
+          ],
+          reason: `CTR giảm ${pctDown}% so với trung bình 7 ngày (${pct(cur.ctrL)} vs ${pct(avg.ctrL)}).` +
+            (cur.cpm > avg.cpm * 1.15 ? ` Đồng thời CPM cũng tăng — có thể creative đang mệt hoặc tệp đã bão hoà.` :
+             ` CPM chưa tăng nhiều — khả năng do nội dung/hình ảnh chưa hút hoặc tệp đã thấy quảng cáo này nhiều.`) +
+            ' Cần xác minh bằng dữ liệu tần suất và breakdown placement.',
+          action: '🔍 Kiểm tra: creative (hook, hình chính, CTA), tệp đối tượng (tần suất cao?), vị trí hiển thị nào CTR thấp nhất, và xem creative đã chạy bao lâu.'
+        });
+      }
+    }
+
+    // --- 3. CPC tăng ---
+    if (cur.lc >= 20 && avg.cpc > 0 && cur.cpc > avg.cpc * 1.2) {
+      const pctUp = Math.round((cur.cpc / avg.cpc - 1) * 100);
+      if (pctUp >= 20) {
+        const sev = pctUp >= 40 ? 'crit' : 'warn';
+        const ctrIssue = cur.ctrL < avg.ctrL * 0.85;
+        const cpmIssue = cur.cpm > avg.cpm * 1.15;
+        ANOMALIES.push({
+          sev, icon: '💸', type: 'cpc_up',
+          title: `CPC tăng ${pctUp}%`,
+          entity: entName, acc: accName, accId: as.accId, asId: as.id, project: as.project,
+          metrics: [
+            { l: 'CPC hiện tại', v: k(cur.cpc) },
+            { l: 'CPC TB 7N', v: k(avg.cpc) },
+            { l: 'CTR', v: pct(cur.ctrL) + (ctrIssue ? ' ↓' : '') },
+            { l: 'CPM', v: k(cur.cpm) + (cpmIssue ? ' ↑' : '') }
+          ],
+          reason: `CPC tăng ${pctUp}% (${k(cur.cpc)} vs TB ${k(avg.cpc)}).` +
+            (ctrIssue && cpmIssue ? ` Cả CTR giảm và CPM tăng — CPC bị đẩy từ hai phía.` :
+             ctrIssue ? ` CTR đang giảm — click đắt hơn do ít người hứng thú với nội dung.` :
+             cpmIssue ? ` CPM tăng nhưng CTR ổn — chi phí tiếp cận tăng do cạnh tranh.` :
+             ' Cần xem thêm CTR và CPM theo placement để xác định nguyên nhân chính xác.'),
+          action: '🔍 Kiểm tra: CTR theo creative, CPM theo placement, và chất lượng click (bounce rate nếu có).'
+        });
+      }
+    }
+
+    // --- 4. Tỉ lệ chuyển đổi (CR = KQ/click) giảm ---
+    if (cur.lc >= 30 && avg.cr > 0 && avg.lc >= 100 && cur.cr < avg.cr * 0.7) {
+      const pctDown = Math.round((1 - cur.cr / avg.cr) * 100);
+      if (pctDown >= 25) {
+        const sev = pctDown >= 45 ? 'crit' : 'warn';
+        ANOMALIES.push({
+          sev, icon: '🎯', type: 'cr_down',
+          title: `Tỉ lệ chuyển đổi giảm ${pctDown}%`,
+          entity: entName, acc: accName, accId: as.accId, asId: as.id, project: as.project,
+          metrics: [
+            { l: 'CR hiện tại', v: pct(cur.cr) },
+            { l: 'CR TB 7N', v: pct(avg.cr) },
+            { l: 'Click → KQ', v: `${cur.lc} → ${cur.r}` },
+            { l: 'TB/ngày 7N', v: `${Math.round(avg1.lc)} → ${avg1.r.toFixed(1)}` }
+          ],
+          reason: `Tỉ lệ chuyển đổi từ click thành kết quả giảm ${pctDown}% (${pct(cur.cr)} vs TB ${pct(avg.cr)}).` +
+            ` Có ${cur.lc} click nhưng chỉ ${cur.r} kết quả.` +
+            (cur.ctrL >= avg.ctrL * 0.9 ? ' CTR vẫn tốt — vấn đề có thể nằm ở landing page, form đăng ký hoặc chất lượng traffic.' :
+             ' CTR cũng giảm — nội dung có thể đang thu hút nhầm đối tượng.') +
+            ' Đây là nhận định sơ bộ, cần kiểm tra thêm.',
+          action: '🔍 Kiểm tra: landing page (tốc độ tải, UX, nội dung khớp QC?), biểu mẫu đăng ký (có bị lỗi?), chất lượng traffic (placement, thiết bị), và tệp đối tượng.'
+        });
+      }
+    }
+
+    // --- 5. CPR tăng liên tục (3 ngày) ---
+    if (D.days.length >= 4) {
+      const d0 = today ? D.days[0] : D.days[1];
+      const d1 = today ? D.days[1] : D.days[2];
+      const d2 = today ? D.days[2] : D.days[3];
+      const m0 = agg(e, [d0]), m1 = d1 ? agg(e, [d1]) : null, m2 = d2 ? agg(e, [d2]) : null;
+      if (m0.r >= 1 && m1 && m1.r >= 1 && m2 && m2.r >= 1 && m0.s >= 50000 && m1.s >= 50000) {
+        if (m2.cpr < m1.cpr * 1.05 && m1.cpr < m0.cpr * 0.95 && m0.cpr > avg.cpr * 1.15) {
+          // CPR đang leo: m2 < m1 < m0 (ngày gần nhất đắt nhất)
+          const pctUp = avg.cpr > 0 ? Math.round((m0.cpr / avg.cpr - 1) * 100) : 0;
+          if (pctUp >= 15) {
+            ANOMALIES.push({
+              sev: pctUp >= 30 ? 'crit' : 'warn', icon: '🔺', type: 'cpr_trend',
+              title: `CPR tăng liên tục ${pctUp}% vs TB 7N`,
+              entity: entName, acc: accName, accId: as.accId, asId: as.id, project: as.project,
+              metrics: [
+                { l: ddmm(d2), v: k(m2.cpr) + ` (${m2.r} KQ)` },
+                { l: ddmm(d1), v: k(m1.cpr) + ` (${m1.r} KQ)` },
+                { l: ddmm(d0), v: k(m0.cpr) + ` (${m0.r} KQ)` },
+                { l: 'TB 7N', v: k(avg.cpr) }
+              ],
+              reason: `CPR leo dốc 3 ngày liên tiếp: ${k(m2.cpr)} → ${k(m1.cpr)} → ${k(m0.cpr)}, hiện cao hơn TB 7 ngày ${pctUp}%.` +
+                (cur.ctrL < avg.ctrL * 0.85 ? ' CTR cũng giảm — creative có thể đang mệt.' : '') +
+                (cur.cpm > avg.cpm * 1.2 ? ' CPM tăng — chi phí tiếp cận cũng đắt hơn.' : '') +
+                (cur.cr < avg.cr * 0.7 && avg.cr > 0 ? ' Tỉ lệ chuyển đổi giảm — landing page hoặc tệp cần xem lại.' : '') +
+                ' Xu hướng tăng CPR kéo dài thường cho thấy hiệu quả chiến dịch đang giảm dần.',
+              action: '🔍 Kiểm tra: hiệu quả creative (thay mẫu?), tệp đối tượng (tần suất?), và xem nhóm nào trong chiến dịch đóng góp nhiều nhất vào mức tăng CPR.'
+            });
+          }
+        }
+      }
+    }
+
+    // --- 6. Chi tiêu tăng nhưng kết quả không tăng tương ứng ---
+    if (avg1.s > 0 && avg1.r > 0 && cur.s >= avg1.s * 0.8) {
+      const spendRatio = cur.s / avg1.s;
+      const resultRatio = avg1.r > 0 ? cur.r / avg1.r : 0;
+      const efficiency = spendRatio > 0 ? resultRatio / spendRatio : 1;
+      if (spendRatio >= 1.15 && efficiency < 0.65 && cur.s >= 80000) {
+        const spUp = Math.round((spendRatio - 1) * 100);
+        const rDown = resultRatio < 1 ? Math.round((1 - resultRatio) * 100) : 0;
+        ANOMALIES.push({
+          sev: efficiency < 0.4 ? 'crit' : 'warn', icon: '⚡', type: 'spend_no_result',
+          title: `Chi tăng ${spUp}%, hiệu suất giảm`,
+          entity: entName, acc: accName, accId: as.accId, asId: as.id, project: as.project,
+          metrics: [
+            { l: 'Chi tiêu', v: k(cur.s) + ` (+${spUp}%)` },
+            { l: 'TB/ngày 7N', v: k(avg1.s) },
+            { l: 'Kết quả', v: cur.r + ' KQ' + (rDown ? ` (−${rDown}%)` : '') },
+            { l: 'TB KQ/ngày', v: avg1.r.toFixed(1) }
+          ],
+          reason: `Chi tiêu tăng ${spUp}% so với TB/ngày nhưng kết quả ${rDown ? 'giảm ' + rDown + '%' : 'không tăng tương ứng'} — hiệu suất biên đang giảm.` +
+            ` Mỗi đồng chi thêm mang lại ít kết quả hơn.` +
+            (cur.cpm > avg.cpm * 1.2 ? ' CPM tăng — chi phí tiếp cận đắt.' : '') +
+            (cur.ctrL < avg.ctrL * 0.85 ? ' CTR giảm — nội dung kém hấp dẫn hơn.' : '') +
+            ' Cần đánh giá lại ngân sách phân bổ.',
+          action: '🔍 Kiểm tra: hiệu suất biên (thêm ngân sách có thực sự thêm KQ?), creative nào ngốn chi tiêu nhất mà ít KQ, và cân nhắc chuyển ngân sách sang nhóm hiệu quả hơn.'
+        });
+      }
+    }
+
+    // --- 7. Chiến dịch đột ngột ngừng tiêu ---
+    if (today && avg1.s >= 80000 && cur.s < avg1.s * 0.1 * ef && ef >= 0.3) {
+      const hourVN = vnNow().getUTCHours();
+      if (hourVN >= 10) { // chỉ cảnh báo sau 10h sáng
+        ANOMALIES.push({
+          sev: 'crit', icon: '🚫', type: 'stopped',
+          title: 'Ngừng tiêu đột ngột',
+          entity: entName, acc: accName, accId: as.accId, asId: as.id, project: as.project,
+          metrics: [
+            { l: 'Chi hôm nay', v: k(cur.s) },
+            { l: 'TB/ngày 7N', v: k(avg1.s) },
+            { l: 'Giờ hiện tại', v: hourVN + 'h' },
+            { l: 'Nên tiêu ~', v: k(avg1.s * ef) }
+          ],
+          reason: `Nhóm quảng cáo gần như ngừng tiêu — chỉ ${k(cur.s)} (TB 7 ngày là ${k(avg1.s)}/ngày).` +
+            ` Tính đến ${hourVN}h, lẽ ra đã tiêu khoảng ${k(avg1.s * ef)}.` +
+            ' Khả năng: creative bị từ chối, hết ngân sách, lỗi thanh toán, hoặc hệ thống phân phối gặp vấn đề.',
+          action: '🔍 Kiểm tra ngay: trạng thái QC trong Ads Manager, creative có bị reject? Thanh toán có lỗi? Ngân sách chiến dịch/tài khoản còn không? Nhóm có đang trong learning limited?'
+        });
+      }
+    }
+  });
+
+  // Sắp xếp: critical trước, rồi warn, rồi info — trong cùng mức thì theo chi tiêu
+  const sevOrder = { crit: 0, warn: 1, info: 2 };
+  ANOMALIES.sort((a, b) => (sevOrder[a.sev] - sevOrder[b.sev]) || (b.metrics[0] || 0) - (a.metrics[0] || 0));
+
+  // Giới hạn tránh quá nhiều — gom trùng type+project, giữ top 3 mỗi loại
+  const byType = {};
+  ANOMALIES = ANOMALIES.filter(a => {
+    const key = a.type + ':' + a.project;
+    byType[key] = (byType[key] || 0) + 1;
+    return byType[key] <= 3;
+  });
+}
+
+let anomalyAccFilter = 'ALL'; // filter hiện tại: ALL hoặc accId
+
+function renderAnomalies() {
+  const box = $('anomalyBox'); if (!box) return;
+  if (!D) { box.innerHTML = ''; return; }
+  detectAnomalies();
+  if (!ANOMALIES.length) { box.innerHTML = ''; return; }
+
+  const nC = ANOMALIES.filter(a => a.sev === 'crit').length;
+  const nW = ANOMALIES.filter(a => a.sev === 'warn').length;
+  const nI = ANOMALIES.length - nC - nW;
+  const open = LS.get('ao_anomaly_open', true);
+
+  // Gom theo tài khoản
+  const byAcc = {};
+  ANOMALIES.forEach(a => {
+    const key = a.accId || a.acc || 'unknown';
+    if (!byAcc[key]) byAcc[key] = { name: a.acc, id: key, items: [], crit: 0, warn: 0, info: 0 };
+    byAcc[key].items.push(a);
+    if (a.sev === 'crit') byAcc[key].crit++;
+    else if (a.sev === 'warn') byAcc[key].warn++;
+    else byAcc[key].info++;
+  });
+  const accList = Object.values(byAcc).sort((a, b) => (b.crit - a.crit) || (b.warn - a.warn) || (b.items.length - a.items.length));
+
+  // Lọc theo filter
+  const filtered = anomalyAccFilter === 'ALL' ? ANOMALIES : ANOMALIES.filter(a => (a.accId || a.acc) === anomalyAccFilter);
+  const fC = filtered.filter(a => a.sev === 'crit').length;
+  const fW = filtered.filter(a => a.sev === 'warn').length;
+
+  box.innerHTML = `<details class="anomaly-wrap" id="anomalyDet" ${open ? 'open' : ''}>
+    <summary class="card row between" style="padding:12px;margin-top:12px;cursor:pointer;gap:8px">
+      <b class="sm">🔍 Phát hiện bất thường</b>
+      <span class="row" style="gap:4px">
+        ${nC ? `<span class="anomaly-cnt crit">${nC} nghiêm trọng</span>` : ''}
+        ${nW ? `<span class="anomaly-cnt warn">${nW} cảnh báo</span>` : ''}
+        ${nI ? `<span class="anomaly-cnt info">${nI} theo dõi</span>` : ''}
+        <span class="muted">▾</span>
+      </span>
+    </summary>
+    <div class="hint xs muted" style="margin:6px 4px 8px;line-height:1.5">So sánh chỉ số hiện tại với trung bình 7 ngày. App chỉ đưa ra <b>nguyên nhân có khả năng</b>, không phải kết luận — bạn cần kiểm tra thêm trong Ads Manager.</div>
+    ${accList.length > 1 ? `<div class="anomaly-acc-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 4px 10px">
+      <button class="anomaly-acc-btn ${anomalyAccFilter === 'ALL' ? 'active' : ''}" data-acc="ALL">Tất cả (${ANOMALIES.length})</button>
+      ${accList.map(ac => `<button class="anomaly-acc-btn ${anomalyAccFilter === ac.id ? 'active' : ''}" data-acc="${esc(ac.id)}">
+        ${esc(ac.name)} (${ac.items.length})${ac.crit ? ' <span class="anomaly-cnt crit" style="font-size:10px;padding:1px 5px">${ac.crit}</span>' : ''}
+      </button>`).join('')}
+    </div>` : ''}
+    ${anomalyAccFilter === 'ALL' && accList.length > 1 ? anomalySummaryTable(accList) : ''}
+    ${filtered.map(anomalyCard).join('')}
+  </details>`;
+
+  // Bind toggle
+  const det = $('anomalyDet');
+  if (det) det.addEventListener('toggle', () => LS.set('ao_anomaly_open', det.open));
+
+  // Bind account filter tabs
+  box.querySelectorAll('.anomaly-acc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      anomalyAccFilter = btn.dataset.acc;
+      renderAnomalies();
+    });
+  });
+}
+
+function anomalySummaryTable(accList) {
+  return `<div class="card" style="padding:10px;margin:0 0 10px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:4px 6px">Tài khoản</th>
+        <th style="text-align:center;padding:4px 6px">🔴</th>
+        <th style="text-align:center;padding:4px 6px">🟡</th>
+        <th style="text-align:center;padding:4px 6px">🔵</th>
+        <th style="text-align:center;padding:4px 6px">Tổng</th>
+      </tr></thead>
+      <tbody>${accList.map(ac => `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="anomalyAccFilter='${esc(ac.id)}';renderAnomalies()">
+        <td style="padding:4px 6px;font-weight:600">${esc(ac.name)}</td>
+        <td style="text-align:center;padding:4px 6px;color:var(--crit,#ef4444)">${ac.crit || '—'}</td>
+        <td style="text-align:center;padding:4px 6px;color:var(--warn,#f59e0b)">${ac.warn || '—'}</td>
+        <td style="text-align:center;padding:4px 6px;color:var(--info,#3b82f6)">${ac.info || '—'}</td>
+        <td style="text-align:center;padding:4px 6px;font-weight:700">${ac.items.length}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`;
+}
+
+function anomalyCard(a) {
+  return `<div class="anomaly-card ${a.sev}">
+    <div class="ahd">
+      <div class="aicon">${a.icon}</div>
+      <div class="grow">
+        <div class="atitle">${esc(a.title)}</div>
+        <div class="xs muted trunc">${esc(a.entity)}</div>
+      </div>
+      <span class="tag ${a.sev}" style="flex:none">${a.sev === 'crit' ? 'NGHIÊM TRỌNG' : a.sev === 'warn' ? 'CẢNH BÁO' : 'THEO DÕI'}</span>
+    </div>
+    <div class="abd">
+      <div class="ametrics">${a.metrics.map(m => `<div class="amet"><div class="al">${esc(m.l)}</div><div class="av">${m.v}</div></div>`).join('')}</div>
+      <div class="areason"><b>💡 Nhận định:</b> ${esc(a.reason)}</div>
+      <div class="aaction"><b>📋 Đề xuất:</b> ${esc(a.action)}</div>
+    </div>
+  </div>`;
+}
+
+// ---------- (3.6) LỊCH SỬ THAY ĐỔI & THỜI GIAN ỔN ĐỊNH ----------
+function renderBudgetHistory() {
+  const box = $('budgetHistoryBox'); if (!box) return;
+  if (!D) { box.innerHTML = ''; return; }
+
+  const hist = LS.get('ao_budget_history', []);
+  const cooldownMap = LS.get('ao_cooldown', {});
+  const now = Date.now();
+
+  // Lọc thay đổi trong 7 ngày gần nhất, thuộc project đang xem
+  const recent = hist.filter(h => {
+    if (now - h.ts > 7 * 24 * 3600e3) return false;
+    if (currentProject === 'ALL') return true;
+    const as = D.adsets[h.id]; return as && as.project === currentProject;
+  });
+
+  // Gom theo adset, lấy lần thay đổi gần nhất
+  const byAdset = {};
+  recent.forEach(h => {
+    if (!byAdset[h.id] || h.ts > byAdset[h.id].ts) byAdset[h.id] = h;
+  });
+
+  const entries = Object.values(byAdset).sort((a, b) => b.ts - a.ts);
+  if (!entries.length) { box.innerHTML = ''; return; }
+
+  // Tính CPR hiện tại cho từng adset để so với CPR lúc thay đổi
+  const enriched = entries.map(h => {
+    const hoursAgo = Math.round((now - h.ts) / 3600e3);
+    const e = D.ins.adset[h.id];
+    const today = focusDay === 'today';
+    const T = today ? [D.days[0]] : [D.days[1]];
+    const curM = e ? agg(e, T) : null;
+
+    // Trạng thái học: < 24h = đang học, 24-48h = mới ổn, > 48h = đã ổn
+    let status, statusLabel;
+    if (hoursAgo < 24) { status = 'learning'; statusLabel = `⏳ Đang học lại (${hoursAgo}h trước)`; }
+    else if (hoursAgo < 48) { status = 'recent'; statusLabel = `🔄 Mới ổn định (${hoursAgo}h trước)`; }
+    else { status = 'stable'; statusLabel = `✅ Đã ổn định (${Math.round(hoursAgo / 24)} ngày trước)`; }
+
+    // Đếm số lần thay đổi trong 7 ngày
+    const changeCount = recent.filter(r => r.id === h.id).length;
+
+    return { ...h, hoursAgo, curM, status, statusLabel, changeCount };
+  });
+
+  // Cảnh báo thay đổi quá nhiều
+  const tooFrequent = enriched.filter(e => e.changeCount >= 3);
+
+  const open = LS.get('ao_bhist_open', false);
+  const nLearn = enriched.filter(e => e.status === 'learning').length;
+  const nRecent = enriched.filter(e => e.status === 'recent').length;
+
+  box.innerHTML = `<details class="card" style="margin-top:12px;padding:12px" id="bhistDet" ${open ? 'open' : ''}>
+    <summary class="row between" style="gap:8px">
+      <b class="sm">📋 Lịch sử thay đổi & ổn định</b>
+      <span class="row" style="gap:4px">
+        ${nLearn ? `<span class="bhist-badge learning">${nLearn} đang học</span>` : ''}
+        ${nRecent ? `<span class="bhist-badge recent">${nRecent} mới ổn</span>` : ''}
+        <span class="muted">▾</span>
+      </span>
+    </summary>
+    <div class="hint xs muted" style="margin:6px 0 4px;line-height:1.5">Sau khi điều chỉnh ngân sách, Meta cần 24–48h để tối ưu lại phân phối. Tránh thay đổi liên tục — để dữ liệu đủ trước khi quyết định tiếp.</div>
+    ${tooFrequent.length ? `<div class="banner warn" style="margin:6px 0 8px;padding:8px 10px;font-size:12px">⚠️ <b>${tooFrequent.map(e => esc(e.name)).join(', ')}</b> đã thay đổi NS ${tooFrequent[0].changeCount}+ lần trong 7 ngày — quá nhiều lần sẽ khiến thuật toán khó tối ưu.</div>` : ''}
+    ${enriched.slice(0, 10).map(bhistRow).join('')}
+    ${enriched.length > 10 ? `<div class="xs muted" style="margin-top:6px">+${enriched.length - 10} thay đổi khác</div>` : ''}
+  </details>`;
+
+  const det = $('bhistDet'); if (det) det.addEventListener('toggle', () => LS.set('ao_bhist_open', det.open));
+}
+
+function bhistRow(h) {
+  const budgetChange = h.from && h.to ? (h.to > h.from ? `+${Math.round((h.to / h.from - 1) * 100)}%` : `${Math.round((h.to / h.from - 1) * 100)}%`) : '';
+  const snapCpr = h.snapBefore && h.snapBefore.cpr > 0 ? k(h.snapBefore.cpr) : '—';
+  const snapR = h.snapBefore ? h.snapBefore.r : '—';
+  const curCpr = h.curM && h.curM.r > 0 ? k(h.curM.cpr) : '—';
+  const curR = h.curM ? h.curM.r : '—';
+
+  // So sánh CPR trước và sau
+  let cprTrend = '';
+  if (h.snapBefore && h.snapBefore.cpr > 0 && h.curM && h.curM.r > 0) {
+    const diff = h.curM.cpr / h.snapBefore.cpr - 1;
+    cprTrend = diff > 0.05 ? ` <span class="bad">(+${Math.round(diff * 100)}%)</span>` : diff < -0.05 ? ` <span class="good">(${Math.round(diff * 100)}%)</span>` : ' <span class="faint">(≈)</span>';
+  }
+
+  return `<div class="bhist-row" data-open="adset:${esc(h.id)}">
+    <div class="row between" style="gap:6px;cursor:pointer">
+      <div class="grow" style="min-width:0"><div class="sm b trunc">${esc(h.name)}</div><div class="xs muted">${esc(h.acc)}</div></div>
+      <span class="bhist-badge ${h.status}" style="flex:none">${h.status === 'learning' ? 'ĐANG HỌC' : h.status === 'recent' ? 'MỚI ỔN' : 'ĐÃ ỔN'}</span>
+    </div>
+    <div class="bhist-metrics">
+      <div><span class="bl">NS trước:</span> <span class="bv">${h.from ? k(h.from) : '—'}</span></div>
+      <div><span class="bl">NS sau:</span> <span class="bv">${h.to ? k(h.to) : '—'} ${budgetChange ? `<span class="xs ${h.to > h.from ? 'good' : 'bad'}">${budgetChange}</span>` : ''}</span></div>
+      <div><span class="bl">CPR lúc đổi:</span> <span class="bv">${snapCpr}</span> <span class="faint xs">(${snapR} KQ)</span></div>
+      <div><span class="bl">CPR hiện tại:</span> <span class="bv">${curCpr}${cprTrend}</span> <span class="faint xs">(${curR} KQ)</span></div>
+    </div>
+    <div class="xs muted" style="margin-top:4px">${h.statusLabel}${h.changeCount > 1 ? ` · <span class="warn">${h.changeCount} lần thay đổi trong 7 ngày</span>` : ''}</div>
+  </div>`;
 }
 
 // ---------- (4) KẾ HOẠCH NGÂN SÁCH THÁNG + DỰ BÁO ----------
@@ -1481,10 +1958,18 @@ function runEngine() {
 
     let rec = null;
     if (K > 0) {
-      // Feature 1: nếu đang trong cooldown 48h → bỏ qua kill/cut/scale
+      // Feature 1: Smart cooldown — 48h sau khi thay đổi NS, nhưng bypass nếu:
+      // - Chi tiêu = 0 sau 12h trưa (lỗi phân phối nghiêm trọng)
+      // - 2 ngày liên tiếp chi > 200k mà 0 KQ (crit)
       if (inCooldown) {
-        OKS.push({ ent, t, r, K, note: `Vừa điều chỉnh NS — đang học lại (còn ${cdHoursLeft}h)`, dot: '🔵' });
-        return;
+        const isCritical = (today && hourVN >= 12 && t.imp === 0 && t.s === 0) ||
+          (t.s > 200000 && t.r === 0);
+        if (!isCritical) {
+          OKS.push({ ent, t, r, K, note: `Vừa điều chỉnh NS — đang học lại (còn ${cdHoursLeft}h)`, dot: '🔵' });
+          return;
+        }
+        // Critical bypass: vẫn đánh giá, thêm ghi chú
+        sig.push(`⚡ Bypass cooldown — phát hiện bất thường nghiêm trọng cần xử lý ngay dù đang trong thời gian ổn định.`);
       }
       const ab = accBase[as.accId] || {};
       const isNewGroup = r.s < K * 0.5; // nhóm mới = lịch sử 3 ngày trước chưa tiêu đủ 0.5 CPR
@@ -1548,6 +2033,19 @@ function runEngine() {
             ],
             action: killPauseAct, alts: [] };
         }
+        // RULE 5: Nhóm cũ, CPR trung bình 3 ngày (T+R) > 200k — cảnh báo dù không tắt hẳn
+        if (!rec && total3r > 0 && total3s >= K * 1.5) {
+          const avgCpr3 = total3s / total3r;
+          if (avgCpr3 > 200000) {
+            rec = { type: 'watch', title: '⚠️ CPR TB 3 NGÀY CAO', badge: `TB ${k(avgCpr3)} · ${total3r} KQ`,
+              impact: total3s,
+              reasons: [
+                `CPR trung bình 3 ngày: ${vnd(avgCpr3)} (tiêu ${k(total3s)}, ra ${total3r} kết quả) — cao hơn mục tiêu ${pct((avgCpr3 / K - 1) * 100, 0)}.`,
+                t.cpr > 0 ? `Hôm nay CPR ${k(t.cpr)} · 3 ngày trước CPR ${k(r.cpr)} — xu hướng ${t.cpr > r.cpr ? 'đang tệ dần' : 'đang cải thiện'}.` : '3 ngày trước CPR ' + k(r.cpr) + '.',
+                'Nếu không cải thiện trong 1–2 ngày tới nên cân nhắc tắt và làm lại content/tệp.'
+              ] };
+          }
+        }
         // Giảm ngân sách cho nhóm cũ ABO nếu chưa đến ngưỡng tắt
         if (!rec && bt && !isCBO && t.s >= 1.5 * K && (t.r === 0 || t.cpr > S.cutX * K) && (r.r === 0 || r.cpr > S.cutX * K * 0.92)) {
           rec = { type: 'cut', title: `GIẢM ${S.downPct}% NGÂN SÁCH`, badge: t.r ? `CPR ${xf(t.cpr / K)} mục tiêu` : 'Chưa ra số', impact: t.s,
@@ -1555,6 +2053,23 @@ function runEngine() {
               r.r ? `3 ngày trước CPR ${k(r.cpr)} — cũng trên mục tiêu.` : '3 ngày trước cũng chưa có kết quả.'],
             action: budgetAction(bt, -S.downPct, as.name),
             alts: [killPauseAct] };
+        }
+      }
+      // RULE 6: Bất kỳ nhóm nào, 2 ngày liên tiếp chi > 200k mà 0 kết quả (cảnh báo sớm)
+      if (!rec) {
+        const ydIdx6 = today ? 1 : 2;
+        const yd6 = D.days[ydIdx6] ? agg(e, [D.days[ydIdx6]]) : null;
+        if (yd6 && yd6.s > 0) {
+          const total2s6 = (t.s || 0) + (yd6.s || 0);
+          const total2r6 = (t.r || 0) + (yd6.r || 0);
+          if (total2s6 > 200000 && total2r6 === 0) {
+            rec = { type: 'watch', title: '⚠️ 2 NGÀY CHƯA RA KẾT QUẢ', badge: `${k(total2s6)} · 0 KQ`,
+              impact: total2s6,
+              reasons: [
+                `Hôm qua chi ${k(yd6.s)}, ${today ? 'hôm nay' : 'ngày đang xét'} chi ${k(t.s)} — tổng 2 ngày ${k(total2s6)} chưa có kết quả nào.`,
+                `Kiểm tra ngay creative, landing page, form và tệp đối tượng — nếu hết hôm nay vẫn 0 KQ nên cân nhắc tắt nhóm.`
+              ] };
+          }
         }
       }
       // SCALE: cả nhóm mới & cũ, chỉ áp dụng ABO
@@ -1823,8 +2338,19 @@ async function runActions(items) {
       log.unshift(entry);
       if (it.recKey) doneMap[it.recKey] = { id: entry.id, label: actionLabel(a), ts: entry.ts };
       // Feature 1: Cooldown — ghi nhận thời điểm thay đổi ngân sách để ẩn rec 48h sau
-      if ((a.kind === 'set_budget' || a.kind === 'budget_change') && a.type === 'adset' && a.id) {
+      if ((a.kind === 'set_budget' || a.kind === 'budget_change' || a.kind === 'budget') && a.type === 'adset' && a.id) {
         const cd = LS.get('ao_cooldown', {}); cd[a.id] = Date.now(); LS.set('ao_cooldown', cd);
+      }
+      // Lịch sử thay đổi NS chi tiết
+      if ((a.kind === 'budget' || a.kind === 'set_budget' || a.kind === 'budget_change') && a.id) {
+        const hist = LS.get('ao_budget_history', []);
+        hist.unshift({
+          id: a.id, type: a.type, name: a.name, ts: Date.now(),
+          from: a.from || 0, to: a.to || 0,
+          snapBefore: entry.snap,
+          acc: it.acc || ''
+        });
+        LS.set('ao_budget_history', hist.slice(0, 200));
       }
     } else fails.push((a.name || a.id) + ': ' + res.msg);
   }
@@ -1994,6 +2520,8 @@ function renderTodo() {
       <div class="xs muted" style="grid-column:1/-1">${k(o.t.s)} · ${o.t.r} KQ${o.t.r ? ' · CPR ' + k(o.t.cpr) : ''} · ${esc(o.ent.accName)}</div></div>`).join('') || '<div class="empty">Không có nhóm nào.</div>'}</div></details>`;
   renderPlan();
   renderFatigue();
+  renderAnomalies();
+  renderBudgetHistory();
 }
 
 function metricBox(label, m, K) {
