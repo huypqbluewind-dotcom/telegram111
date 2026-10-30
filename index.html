@@ -175,9 +175,16 @@ details summary{cursor:pointer;list-style:none} details summary::-webkit-details
 .anomaly-cnt.crit{background:rgba(244,63,94,.18);color:var(--kill)}
 .anomaly-cnt.warn{background:rgba(245,158,11,.18);color:var(--cut)}
 .anomaly-cnt.info{background:rgba(96,165,250,.18);color:var(--blue)}
-.anomaly-acc-btn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s}
-.anomaly-acc-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.anomaly-acc-btn:not(.active):hover{background:var(--bg3,var(--border))}
+.rpt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rpt-cell{text-align:center;padding:6px 4px;background:var(--bg2);border-radius:8px}
+.rpt-label{font-size:10px;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.rpt-val{font-size:16px;font-weight:700}
+.rpt-cmp{font-size:11px;font-weight:600;margin-top:1px}
+.rpt-cmp.good{color:var(--ok,#22c55e)}.rpt-cmp.bad{color:var(--kill,#ef4444)}.rpt-cmp.faint{color:var(--muted-foreground)}
+.rpt-predict{display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:8px 10px;background:rgba(139,92,246,.1);border-radius:8px;border:1px solid rgba(139,92,246,.25)}
+.rpt-predict-icon{font-size:18px;flex:none;margin-top:1px}
+.acc-section summary .muted.xs{transition:transform .15s}
+.acc-section[open] summary .muted.xs{transform:rotate(90deg)}
 
 /* budget history */
 .bhist-row{padding:10px 0;border-bottom:1px solid var(--border)}
@@ -1134,39 +1141,95 @@ function detectAnomalies() {
   });
 }
 
-let anomalyAccFilter = 'ALL'; // filter hiện tại: ALL hoặc accId
+// ---------- BÁO CÁO TỔNG HỢP & PHÁT HIỆN BẤT THƯỜNG ----------
+
+// Gom chỉ số theo tài khoản: today, yesterday, tổng budget
+function aggByAccount() {
+  if (!D || !D.accounts.length) return [];
+  const today = focusDay === 'today';
+  const T = today ? [D.days[0]] : [D.days[1]];
+  const ydIdx = today ? 1 : 2;
+  const YD = D.days[ydIdx] ? [D.days[ydIdx]] : [];
+  const ef = today ? expectedFrac() : 1;
+
+  const map = {};
+  Object.values(D.adsets).forEach(as => {
+    if (!as.active || !inScope(as.project)) return;
+    const key = as.accId;
+    if (!map[key]) map[key] = { id: key, name: as.accName, project: as.project, tM: emptyM(), ydM: emptyM(), totalBudget: 0, adsetCount: 0 };
+    const e = D.ins.adset[as.id];
+    if (e) { addInto(map[key].tM, e.d && e.d[T[0]]); if (YD.length) addInto(map[key].ydM, e.d && e.d[YD[0]]); }
+    map[key].totalBudget += as.daily_budget || 0;
+    map[key].adsetCount++;
+  });
+
+  return Object.values(map).map(ac => {
+    fin(ac.tM); fin(ac.ydM);
+    // Dự đoán lead cuối ngày: nếu ef > 0, lead dự kiến = (results hiện tại / ef)
+    ac.predictedResults = ef > 0.05 && ac.tM.r > 0 ? Math.round(ac.tM.r / ef) : ac.tM.r;
+    // Dự đoán lead từ ngân sách: totalBudget / CPR hiện tại
+    ac.predictedFromBudget = ac.tM.cpr > 0 ? Math.round(ac.totalBudget / ac.tM.cpr) : 0;
+    ac.ef = ef;
+    return ac;
+  }).sort((a, b) => b.tM.s - a.tM.s);
+}
+
+// So sánh 2 giá trị, trả về class + text
+function cmpVal(cur, prev, inverse) {
+  if (!prev || prev === 0) return { cls: '', txt: '' };
+  const pct = (cur / prev - 1) * 100;
+  if (Math.abs(pct) < 2) return { cls: 'faint', txt: '≈' };
+  const up = pct > 0;
+  // inverse = true → tăng = xấu (CPR, CPC, CPM); false → tăng = tốt (CTR, CR, results)
+  const good = inverse ? !up : up;
+  return { cls: good ? 'good' : 'bad', txt: (up ? '+' : '') + Math.round(pct) + '%' };
+}
 
 function renderAnomalies() {
   const box = $('anomalyBox'); if (!box) return;
   if (!D) { box.innerHTML = ''; return; }
   detectAnomalies();
-  if (!ANOMALIES.length) { box.innerHTML = ''; return; }
 
+  const accs = aggByAccount();
+  if (!accs.length) { box.innerHTML = ''; return; }
+
+  const today = focusDay === 'today';
+  const ef = today ? expectedFrac() : 1;
+  const dayLabel = today ? 'Hôm nay' : 'Hôm qua';
+
+  // Tổng hợp tất cả TK
+  const totT = emptyM(), totYD = emptyM();
+  let totBudget = 0, totPredR = 0, totPredBudget = 0;
+  accs.forEach(ac => { addInto(totT, ac.tM); addInto(totYD, ac.ydM); totBudget += ac.totalBudget; totPredR += ac.predictedResults; totPredBudget += ac.predictedFromBudget; });
+  fin(totT); fin(totYD);
+
+  // Cảnh báo tổng
+  const warns = [];
+  if (totYD.s > 0) {
+    if (totT.cpr > 0 && totYD.cpr > 0 && totT.cpr > totYD.cpr * 1.15) warns.push(`CPR tăng ${Math.round((totT.cpr / totYD.cpr - 1) * 100)}% so với hôm qua`);
+    if (totT.ctrL < totYD.ctrL * 0.85 && totYD.ctrL > 0) warns.push(`CTR giảm ${Math.round((1 - totT.ctrL / totYD.ctrL) * 100)}%`);
+    if (totT.cpm > totYD.cpm * 1.2 && totYD.cpm > 0) warns.push(`CPM tăng ${Math.round((totT.cpm / totYD.cpm - 1) * 100)}%`);
+    if (totT.r < totYD.r * 0.7 && totYD.r >= 3 && ef >= 0.6) warns.push(`Kết quả giảm ${Math.round((1 - totT.r / totYD.r) * 100)}% — cần kiểm tra`);
+  }
+
+  // Anomaly counts
   const nC = ANOMALIES.filter(a => a.sev === 'crit').length;
   const nW = ANOMALIES.filter(a => a.sev === 'warn').length;
   const nI = ANOMALIES.length - nC - nW;
+
   const open = LS.get('ao_anomaly_open', true);
 
-  // Gom theo tài khoản
-  const byAcc = {};
+  // Gom anomaly theo account
+  const anomByAcc = {};
   ANOMALIES.forEach(a => {
-    const key = a.accId || a.acc || 'unknown';
-    if (!byAcc[key]) byAcc[key] = { name: a.acc, id: key, items: [], crit: 0, warn: 0, info: 0 };
-    byAcc[key].items.push(a);
-    if (a.sev === 'crit') byAcc[key].crit++;
-    else if (a.sev === 'warn') byAcc[key].warn++;
-    else byAcc[key].info++;
+    const key = a.accId || 'unknown';
+    if (!anomByAcc[key]) anomByAcc[key] = [];
+    anomByAcc[key].push(a);
   });
-  const accList = Object.values(byAcc).sort((a, b) => (b.crit - a.crit) || (b.warn - a.warn) || (b.items.length - a.items.length));
-
-  // Lọc theo filter
-  const filtered = anomalyAccFilter === 'ALL' ? ANOMALIES : ANOMALIES.filter(a => (a.accId || a.acc) === anomalyAccFilter);
-  const fC = filtered.filter(a => a.sev === 'crit').length;
-  const fW = filtered.filter(a => a.sev === 'warn').length;
 
   box.innerHTML = `<details class="anomaly-wrap" id="anomalyDet" ${open ? 'open' : ''}>
     <summary class="card row between" style="padding:12px;margin-top:12px;cursor:pointer;gap:8px">
-      <b class="sm">🔍 Phát hiện bất thường</b>
+      <b class="sm">📊 Báo cáo ${dayLabel}</b>
       <span class="row" style="gap:4px">
         ${nC ? `<span class="anomaly-cnt crit">${nC} nghiêm trọng</span>` : ''}
         ${nW ? `<span class="anomaly-cnt warn">${nW} cảnh báo</span>` : ''}
@@ -1174,49 +1237,72 @@ function renderAnomalies() {
         <span class="muted">▾</span>
       </span>
     </summary>
-    <div class="hint xs muted" style="margin:6px 4px 8px;line-height:1.5">So sánh chỉ số hiện tại với trung bình 7 ngày. App chỉ đưa ra <b>nguyên nhân có khả năng</b>, không phải kết luận — bạn cần kiểm tra thêm trong Ads Manager.</div>
-    ${accList.length > 1 ? `<div class="anomaly-acc-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 4px 10px">
-      <button class="anomaly-acc-btn ${anomalyAccFilter === 'ALL' ? 'active' : ''}" data-acc="ALL">Tất cả (${ANOMALIES.length})</button>
-      ${accList.map(ac => `<button class="anomaly-acc-btn ${anomalyAccFilter === ac.id ? 'active' : ''}" data-acc="${esc(ac.id)}">
-        ${esc(ac.name)} (${ac.items.length})${ac.crit ? ' <span class="anomaly-cnt crit" style="font-size:10px;padding:1px 5px">${ac.crit}</span>' : ''}
-      </button>`).join('')}
-    </div>` : ''}
-    ${anomalyAccFilter === 'ALL' && accList.length > 1 ? anomalySummaryTable(accList) : ''}
-    ${filtered.map(anomalyCard).join('')}
+
+    ${warns.length ? `<div style="margin:8px 0 4px;display:flex;flex-wrap:wrap;gap:6px">${warns.map(w => `<span class="anomaly-cnt warn" style="font-size:11px;padding:3px 8px">⚠️ ${w}</span>`).join('')}</div>` : ''}
+
+    ${renderSummaryCard('📋 TỔNG HỢP', totT, totYD, totBudget, totPredR, totPredBudget, ef, today)}
+
+    <div style="margin-top:14px;margin-bottom:6px"><b class="sm">📂 Chi tiết theo tài khoản</b></div>
+    ${accs.map(ac => renderAccSection(ac, anomByAcc[ac.id] || [])).join('')}
   </details>`;
 
-  // Bind toggle
   const det = $('anomalyDet');
   if (det) det.addEventListener('toggle', () => LS.set('ao_anomaly_open', det.open));
-
-  // Bind account filter tabs
-  box.querySelectorAll('.anomaly-acc-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      anomalyAccFilter = btn.dataset.acc;
-      renderAnomalies();
-    });
-  });
 }
 
-function anomalySummaryTable(accList) {
-  return `<div class="card" style="padding:10px;margin:0 0 10px;overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="border-bottom:1px solid var(--border)">
-        <th style="text-align:left;padding:4px 6px">Tài khoản</th>
-        <th style="text-align:center;padding:4px 6px">🔴</th>
-        <th style="text-align:center;padding:4px 6px">🟡</th>
-        <th style="text-align:center;padding:4px 6px">🔵</th>
-        <th style="text-align:center;padding:4px 6px">Tổng</th>
-      </tr></thead>
-      <tbody>${accList.map(ac => `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="anomalyAccFilter='${esc(ac.id)}';renderAnomalies()">
-        <td style="padding:4px 6px;font-weight:600">${esc(ac.name)}</td>
-        <td style="text-align:center;padding:4px 6px;color:var(--crit,#ef4444)">${ac.crit || '—'}</td>
-        <td style="text-align:center;padding:4px 6px;color:var(--warn,#f59e0b)">${ac.warn || '—'}</td>
-        <td style="text-align:center;padding:4px 6px;color:var(--info,#3b82f6)">${ac.info || '—'}</td>
-        <td style="text-align:center;padding:4px 6px;font-weight:700">${ac.items.length}</td>
-      </tr>`).join('')}</tbody>
-    </table>
+function renderSummaryCard(label, tM, ydM, budget, predR, predBudget, ef, isToday) {
+  const cS = cmpVal(tM.s, ydM.s * ef, false);
+  const cR = cmpVal(tM.r, ydM.r * ef, false);
+  const cCPR = cmpVal(tM.cpr, ydM.cpr, true);
+  const cCTR = cmpVal(tM.ctrL, ydM.ctrL, false);
+  const cCPM = cmpVal(tM.cpm, ydM.cpm, true);
+  const cCPC = cmpVal(tM.cpc, ydM.cpc, true);
+
+  return `<div class="card" style="padding:12px;margin-top:8px">
+    <div class="row between" style="margin-bottom:10px"><b class="sm">${label}</b>${budget ? `<span class="xs muted">NS: ${k(budget)}/ngày</span>` : ''}</div>
+    <div class="rpt-grid">
+      <div class="rpt-cell"><div class="rpt-label">Chi tiêu</div><div class="rpt-val">${k(tM.s)}</div><div class="rpt-cmp ${cS.cls}">${cS.txt}</div></div>
+      <div class="rpt-cell"><div class="rpt-label">Kết quả</div><div class="rpt-val">${tM.r}</div><div class="rpt-cmp ${cR.cls}">${cR.txt}</div></div>
+      <div class="rpt-cell"><div class="rpt-label">CPR</div><div class="rpt-val">${tM.cpr > 0 ? k(tM.cpr) : '—'}</div><div class="rpt-cmp ${cCPR.cls}">${cCPR.txt}</div></div>
+      <div class="rpt-cell"><div class="rpt-label">CTR</div><div class="rpt-val">${tM.imp > 0 ? pct(tM.ctrL) : '—'}</div><div class="rpt-cmp ${cCTR.cls}">${cCTR.txt}</div></div>
+      <div class="rpt-cell"><div class="rpt-label">CPM</div><div class="rpt-val">${tM.cpm > 0 ? k(tM.cpm) : '—'}</div><div class="rpt-cmp ${cCPM.cls}">${cCPM.txt}</div></div>
+      <div class="rpt-cell"><div class="rpt-label">CPC Link</div><div class="rpt-val">${tM.cpc > 0 ? k(tM.cpc) : '—'}</div><div class="rpt-cmp ${cCPC.cls}">${cCPC.txt}</div></div>
+    </div>
+    ${isToday && (predR > 0 || predBudget > 0) ? `<div class="rpt-predict">
+      <span class="rpt-predict-icon">🔮</span>
+      <div>
+        ${predR > 0 ? `<div class="xs"><b>Dự kiến cuối ngày:</b> ~<b>${predR}</b> lead (theo tốc độ hiện tại${ef < 1 ? ', đã qua ' + Math.round(ef * 100) + '% ngày' : ''})</div>` : ''}
+        ${predBudget > 0 ? `<div class="xs"><b>Tiềm năng từ NS:</b> ~<b>${predBudget}</b> lead (nếu CPR giữ ${tM.cpr > 0 ? k(tM.cpr) : '—'})</div>` : ''}
+      </div>
+    </div>` : ''}
   </div>`;
+}
+
+function renderAccSection(ac, anomalies) {
+  const cCPR = cmpVal(ac.tM.cpr, ac.ydM.cpr, true);
+  const nC = anomalies.filter(a => a.sev === 'crit').length;
+  const nW = anomalies.filter(a => a.sev === 'warn').length;
+  const nI = anomalies.length - nC - nW;
+  const today = focusDay === 'today';
+
+  return `<details class="acc-section" style="margin-top:8px">
+    <summary class="card row between" style="padding:10px;cursor:pointer;gap:6px">
+      <div class="grow" style="min-width:0">
+        <div class="sm b trunc">${esc(ac.name)}</div>
+        <div class="xs muted">${ac.adsetCount} nhóm QC · Chi: ${k(ac.tM.s)} · ${ac.tM.r} KQ · CPR: ${ac.tM.cpr > 0 ? k(ac.tM.cpr) : '—'} <span class="${cCPR.cls}">${cCPR.txt}</span></div>
+      </div>
+      <span class="row" style="gap:4px;flex:none">
+        ${nC ? `<span class="anomaly-cnt crit" style="font-size:10px;padding:1px 5px">${nC}</span>` : ''}
+        ${nW ? `<span class="anomaly-cnt warn" style="font-size:10px;padding:1px 5px">${nW}</span>` : ''}
+        ${nI ? `<span class="anomaly-cnt info" style="font-size:10px;padding:1px 5px">${nI}</span>` : ''}
+        <span class="muted xs">▸</span>
+      </span>
+    </summary>
+    <div style="padding:4px 0 8px">
+      ${renderSummaryCard('', ac.tM, ac.ydM, ac.totalBudget, ac.predictedResults, ac.predictedFromBudget, ac.ef, today)}
+      ${anomalies.length ? `<div style="margin:10px 0 4px"><b class="xs muted">Bất thường phát hiện (${anomalies.length})</b></div>` + anomalies.map(anomalyCard).join('') : `<div class="xs muted" style="padding:8px;text-align:center">✅ Không phát hiện bất thường</div>`}
+    </div>
+  </details>`;
 }
 
 function anomalyCard(a) {
