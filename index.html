@@ -356,7 +356,7 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
     <div id="anomalyBox"></div>
     <div id="budgetHistoryBox"></div>
     <div id="planBox"></div>
-    <div id="campSearchBox" style="margin-top:12px;display:none"><input id="campFilterInp" type="search" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm chiến dịch…" style="font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none"></div>
+    <div id="campSearchBox" style="margin-top:12px;display:none"><input id="campFilterInp" type="search" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm nhóm QC, chiến dịch…" style="font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none"></div>
     <div id="chipsBox" style="margin-top:12px"></div>
     <div id="recList" style="margin-top:12px"></div>
     <div id="fatigueBox"></div>
@@ -759,6 +759,7 @@ let perfWin = 'today', perfLvl = 'campaign', perfSortKey = 's', perfQuery = '', 
 let recFilter = 'all';
 let campFilter = 'all';
 const recCampName = r => r.ent.level === 'campaign' ? r.ent.name : (r.ent.sub || '');
+const recSearchText = r => [r.ent.name, r.ent.sub, r.ent.accName].filter(Boolean).join(' ');
 let recSort = 'priority'; // 'priority' | 'spend' | 'cpr'
 let autoRefreshInterval = 0;   // minutes; 0 = off (loaded from LS on boot)
 let autoRefreshTimer = null;
@@ -2633,7 +2634,7 @@ function renderTodo() {
 
   const list = (() => {
     let filtered = act.filter(r => recFilter === 'all' || r.type === recFilter);
-    if (campFilter !== 'all') { const q = campFilter.toLowerCase(); filtered = filtered.filter(r => recCampName(r).toLowerCase().includes(q)); }
+    if (campFilter !== 'all') { const q = campFilter.toLowerCase(); filtered = filtered.filter(r => recSearchText(r).toLowerCase().includes(q)); }
     if (recSort === 'spend') filtered = [...filtered].sort((a, b) => b.t.s - a.t.s);
     else if (recSort === 'cpr') filtered = [...filtered].sort((a, b) => {
       const ca = a.t.r ? a.t.cpr : 1e15, cb = b.t.r ? b.t.cpr : 1e15;
@@ -3733,7 +3734,7 @@ document.addEventListener('click', ev => {
     case 'copyReport': openReport(); break;
     case 'closeSheet': closeSheet(); break;
     case 'clearCampFilter': { campFilter = 'all'; const ci = $('campFilterInp'); if (ci) ci.value = ''; renderTodo(); break; }
-    case 'selectAll': { const q2 = campFilter !== 'all' ? campFilter.toLowerCase() : ''; RECS.filter(r => !r.snoozed && r.action && !doneMap[r.key] && (recFilter === 'all' || r.type === recFilter) && (!q2 || recCampName(r).toLowerCase().includes(q2))).forEach(r => selected.add(r.key)); renderTodo(); renderBulk(); break; }
+    case 'selectAll': { const q2 = campFilter !== 'all' ? campFilter.toLowerCase() : ''; RECS.filter(r => !r.snoozed && r.action && !doneMap[r.key] && (recFilter === 'all' || r.type === recFilter) && (!q2 || recSearchText(r).toLowerCase().includes(q2))).forEach(r => selected.add(r.key)); renderTodo(); renderBulk(); break; }
     case 'bulkClear': selected.clear(); renderTodo(); renderBulk(); break;
     case 'amOff': amBulk('off'); break;
     case 'amOn': amBulk('on'); break;
