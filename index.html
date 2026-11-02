@@ -356,7 +356,7 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
     <div id="anomalyBox"></div>
     <div id="budgetHistoryBox"></div>
     <div id="planBox"></div>
-    <div id="campSearchBox" style="margin-top:12px;display:none"><input id="campFilterInp" type="search" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm nhóm QC, chiến dịch…" style="font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none"></div>
+    <div id="campSearchBox" style="margin-top:12px;display:none"><input id="campFilterInp" type="search" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm nhóm QC, chiến dịch…" style="font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:#ffffff;color:#1a1a2e;width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none"></div>
     <div id="chipsBox" style="margin-top:12px"></div>
     <div id="recList" style="margin-top:12px"></div>
     <div id="fatigueBox"></div>
@@ -2603,8 +2603,7 @@ function renderTodo() {
   const chip = (t, n, lbl, x) => `<button class="chip ${t} ${recFilter === t ? 'sel' : ''}" data-filter="${t}"><div class="n num">${n}</div><div class="t">${lbl}</div><div class="x">${x}</div></button>`;
   // Lấy danh sách chiến dịch duy nhất từ RECS
   const campNames = [...new Set(act.map(r => recCampName(r)).filter(Boolean))].sort();
-  // Nếu campFilter hiện tại không còn trong danh sách → reset
-  if (campFilter !== 'all' && !campNames.includes(campFilter)) campFilter = 'all';
+  // campFilter là free-text search, không reset theo campNames
   // Show/hide search box riêng (không bị rebuild)
   const searchBox = $('campSearchBox');
   if (searchBox) {
