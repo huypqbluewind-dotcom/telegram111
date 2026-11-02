@@ -2209,6 +2209,11 @@ function runEngine() {
     }
     if (rec) {
       if (!bt && as.lifetime_budget > 0 && rec.type !== 'kill') rec.reasons.push('Nhóm dùng ngân sách trọn đời — app không tự đổi ngân sách, hãy chỉnh trong Ads Manager.');
+      // Watch có budget ABO → thêm action giảm NS + alt tắt nhóm
+      if (rec.type === 'watch' && !rec.action && bt && !isCBO) {
+        rec.action = budgetAction(bt, -S.downPct, as.name);
+        rec.alts = [killPauseAct];
+      }
       RECS.push(Object.assign(rec, { ent, t, r, l, f7, K, budget: bt, key: rec.type + '|adset|' + as.id + '|' + T[0] }));
     } else {
       OKS.push({ ent, t, r, K, note: K && t.s < K * 0.5 ? 'Ít dữ liệu' : (t.r ? 'Trong ngưỡng' : 'Đang theo dõi'), dot: statusDot(t, K) });
@@ -2598,7 +2603,7 @@ function renderTodo() {
   const campNames = [...new Set(act.map(r => recCampName(r)).filter(Boolean))].sort();
   // Nếu campFilter hiện tại không còn trong danh sách → reset
   if (campFilter !== 'all' && !campNames.includes(campFilter)) campFilter = 'all';
-  const campSelect = campNames.length > 1 ? `<span style="position:relative;display:inline-flex;align-items:center"><input id="campFilterInp" type="text" placeholder="🔍 Tìm chiến dịch…" value="${campFilter !== 'all' ? esc(campFilter) : ''}" style="font-size:11px;padding:4px 24px 4px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);width:180px">${campFilter !== 'all' ? '<button id="campFilterClr" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fg);cursor:pointer;font-size:13px;padding:0 2px;line-height:1">✕</button>' : ''}</span>` : '';
+  const campSelect = campNames.length > 1 ? `<span style="position:relative;display:inline-flex;align-items:center;z-index:2"><input id="campFilterInp" type="text" inputmode="text" autocomplete="off" placeholder="🔍 Tìm chiến dịch…" value="${campFilter !== 'all' ? esc(campFilter) : ''}" style="font-size:13px;padding:6px 28px 6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);width:200px;-webkit-appearance:none;appearance:none;touch-action:manipulation">${campFilter !== 'all' ? '<button id="campFilterClr" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fg);cursor:pointer;font-size:15px;padding:2px 4px;line-height:1;z-index:3">✕</button>' : ''}</span>` : '';
   $('chipsBox').innerHTML = `<div class="chips">
     ${chip('kill', cnt('kill'), 'Cần tắt', waste ? 'đang đốt ' + k(waste) : '&nbsp;')}
     ${chip('cut', cnt('cut'), 'Giảm', '&nbsp;')}
@@ -2654,7 +2659,7 @@ function recCard(r) {
   const budgetLine = r.budget ? `<div class="xs muted" style="margin-top:8px">Ngân sách ${r.budget.type === 'campaign' ? 'CBO' : 'ngày'}: <b style="color:var(--foreground)">${vnd(r.budget.cur)}</b> · CPR mục tiêu ${k(r.K)}</div>` : `<div class="xs muted" style="margin-top:8px">CPR mục tiêu ${k(r.K)}</div>`;
   const acts = [];
   if (!done && r.action) acts.push(`<button class="btn ${r.type === 'watch' ? 'p' : r.type}" data-run="${esc(r.key)}" data-i="-1">${esc(actionLabel(r.action))}</button>`);
-  if (r.type === 'scale' && !done && r.budget) {
+  if ((r.type === 'scale' || r.type === 'watch') && !done && r.budget) {
     acts.push(`<span class="manual-bud-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="xs muted">Hoặc nhập tay:</span><input type="number" inputmode="numeric" class="budget-inp" data-bkey="${esc(r.key)}" placeholder="${r.budget.cur}" min="1000" step="1000" style="width:130px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--foreground)"><button class="btn" data-mbud="${esc(r.key)}" style="padding:7px 14px">Áp dụng</button></span>`);
   }
   if (!done) (r.alts || []).forEach((a, i) => acts.push(`<button class="btn" data-run="${esc(r.key)}" data-i="${i}">${esc(actionLabel(a))}</button>`));
@@ -3754,6 +3759,10 @@ document.addEventListener('input', ev => {
 });
 document.addEventListener('click', ev => {
   if (ev.target.id === 'campFilterClr') { campFilter = 'all'; renderTodo(); }
+  if (ev.target.id === 'campFilterInp') { ev.target.focus(); }
+});
+document.addEventListener('touchend', ev => {
+  if (ev.target.id === 'campFilterInp') { ev.preventDefault(); ev.target.focus(); }
 });
 $('perfSearch').addEventListener('input', e => { perfQuery = e.target.value.trim(); renderPerf(); });
 $('amFilter').addEventListener('change', e => { amFilter = e.target.value; renderAmTable(); });
