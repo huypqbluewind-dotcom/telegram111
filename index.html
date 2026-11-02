@@ -2212,7 +2212,7 @@ function runEngine() {
       // Watch có budget ABO → thêm action giảm NS + alt tắt nhóm
       if (rec.type === 'watch' && !rec.action && bt && !isCBO) {
         rec.action = budgetAction(bt, -S.downPct, as.name);
-        rec.alts = [killPauseAct];
+        rec.alts = [{ kind: 'pause', id: as.id, type: 'adset', name: as.name }];
       }
       RECS.push(Object.assign(rec, { ent, t, r, l, f7, K, budget: bt, key: rec.type + '|adset|' + as.id + '|' + T[0] }));
     } else {
