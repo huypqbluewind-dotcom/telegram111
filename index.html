@@ -356,6 +356,7 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
     <div id="anomalyBox"></div>
     <div id="budgetHistoryBox"></div>
     <div id="planBox"></div>
+    <div id="campSearchBox" style="margin-top:12px;display:none"><input id="campFilterInp" type="search" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm chiến dịch…" style="font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none"></div>
     <div id="chipsBox" style="margin-top:12px"></div>
     <div id="recList" style="margin-top:12px"></div>
     <div id="fatigueBox"></div>
@@ -2603,14 +2604,24 @@ function renderTodo() {
   const campNames = [...new Set(act.map(r => recCampName(r)).filter(Boolean))].sort();
   // Nếu campFilter hiện tại không còn trong danh sách → reset
   if (campFilter !== 'all' && !campNames.includes(campFilter)) campFilter = 'all';
-  const campSelect = campNames.length > 1 ? `<span style="position:relative;display:inline-flex;align-items:center;z-index:2"><input id="campFilterInp" type="text" inputmode="text" autocomplete="off" placeholder="🔍 Tìm chiến dịch…" value="${campFilter !== 'all' ? esc(campFilter) : ''}" style="font-size:13px;padding:6px 28px 6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);width:200px;-webkit-appearance:none;appearance:none;touch-action:manipulation">${campFilter !== 'all' ? '<button id="campFilterClr" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fg);cursor:pointer;font-size:15px;padding:2px 4px;line-height:1;z-index:3">✕</button>' : ''}</span>` : '';
+  // Show/hide search box riêng (không bị rebuild)
+  const searchBox = $('campSearchBox');
+  if (searchBox) {
+    if (campNames.length > 1) {
+      searchBox.style.display = '';
+      const inp = $('campFilterInp');
+      if (inp && inp !== document.activeElement) inp.value = campFilter !== 'all' ? campFilter : '';
+    } else {
+      searchBox.style.display = 'none';
+    }
+  }
   $('chipsBox').innerHTML = `<div class="chips">
     ${chip('kill', cnt('kill'), 'Cần tắt', waste ? 'đang đốt ' + k(waste) : '&nbsp;')}
     ${chip('cut', cnt('cut'), 'Giảm', '&nbsp;')}
     ${chip('scale', cnt('scale'), 'Tăng', '&nbsp;')}
     ${chip('watch', cnt('watch'), 'Xem lại', '&nbsp;')}</div>
     <div class="row between" style="margin-top:10px">
-      <span class="row" style="gap:6px">${recFilter !== 'all' ? '<button class="lnk xs" data-filter="all" style="padding:0">← Xem tất cả</button>' : ''}${campSelect}</span>
+      <span class="row" style="gap:6px">${recFilter !== 'all' ? '<button class="lnk xs" data-filter="all" style="padding:0">← Xem tất cả</button>' : ''}${campFilter !== 'all' ? '<button class="lnk xs" data-act="clearCampFilter" style="padding:0">✕ ' + esc(campFilter) + '</button>' : ''}</span>
       <span class="row" style="gap:4px">
         <span class="xs muted" style="margin-right:2px">Sắp xếp:</span>
         <button class="btn xs ${recSort === 'priority' ? 'p' : ''}" data-recsort="priority" style="padding:4px 8px;font-size:11px">Ưu tiên</button>
@@ -3721,6 +3732,7 @@ document.addEventListener('click', ev => {
     case 'datePicker': openDatePicker(); break;
     case 'copyReport': openReport(); break;
     case 'closeSheet': closeSheet(); break;
+    case 'clearCampFilter': { campFilter = 'all'; const ci = $('campFilterInp'); if (ci) ci.value = ''; renderTodo(); break; }
     case 'selectAll': { const q2 = campFilter !== 'all' ? campFilter.toLowerCase() : ''; RECS.filter(r => !r.snoozed && r.action && !doneMap[r.key] && (recFilter === 'all' || r.type === recFilter) && (!q2 || recCampName(r).toLowerCase().includes(q2))).forEach(r => selected.add(r.key)); renderTodo(); renderBulk(); break; }
     case 'bulkClear': selected.clear(); renderTodo(); renderBulk(); break;
     case 'amOff': amBulk('off'); break;
@@ -3747,23 +3759,20 @@ document.addEventListener('click', ev => {
     case 'resetRules': ['killX', 'cutX', 'scaleX', 'upPct', 'downPct', 'freqMax', 'ctrMin'].forEach(key => { S[key] = DEFAULT_SETTINGS[key]; }); LS.set('ao_settings', S); renderSettings(); toast('Đã khôi phục ngưỡng mặc định', 'ok'); break;
   }
 });
-document.addEventListener('input', ev => {
-  if (ev.target.id === 'campFilterInp') {
-    const v = ev.target.value.trim();
-    campFilter = v || 'all';
-    renderTodo();
-    // Re-focus input after render
-    const inp = $('campFilterInp');
-    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-  }
-});
-document.addEventListener('click', ev => {
-  if (ev.target.id === 'campFilterClr') { campFilter = 'all'; renderTodo(); }
-  if (ev.target.id === 'campFilterInp') { ev.target.focus(); }
-});
-document.addEventListener('touchend', ev => {
-  if (ev.target.id === 'campFilterInp') { ev.preventDefault(); ev.target.focus(); }
-});
+// Campaign search — input cố định, không bị rebuild
+(function() {
+  let debounce = null;
+  const inp = $('campFilterInp');
+  if (!inp) return;
+  inp.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      campFilter = inp.value.trim() || 'all';
+      renderTodo();
+    }, 250);
+  });
+  inp.addEventListener('keydown', ev => { if (ev.key === 'Escape') { inp.value = ''; campFilter = 'all'; inp.blur(); renderTodo(); } });
+})();
 $('perfSearch').addEventListener('input', e => { perfQuery = e.target.value.trim(); renderPerf(); });
 $('amFilter').addEventListener('change', e => { amFilter = e.target.value; renderAmTable(); });
 $('amCmp').checked = amCompare;
