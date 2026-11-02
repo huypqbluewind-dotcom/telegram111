@@ -756,6 +756,8 @@ let currentTab = 'todo';
 let focusDay = null;          // 'today' | 'yesterday'
 let perfWin = 'today', perfLvl = 'campaign', perfSortKey = 's', perfQuery = '', perfActiveOnly = true;
 let recFilter = 'all';
+let campFilter = 'all';
+const recCampName = r => r.ent.level === 'campaign' ? r.ent.name : (r.ent.sub || '');
 let recSort = 'priority'; // 'priority' | 'spend' | 'cpr'
 let autoRefreshInterval = 0;   // minutes; 0 = off (loaded from LS on boot)
 let autoRefreshTimer = null;
@@ -2081,6 +2083,16 @@ function runEngine() {
               action: killPauseAct, alts: [] };
           }
         }
+        // RULE 1B: Nhóm mới có KQ nhưng CPR quá cao (> K*2.3 ~300k) → Tắt
+        if (!rec && t.r > 0 && t.s >= K * 1.2 && t.cpr > K * 2.3) {
+          rec = { type: 'kill', title: 'TẮT – NHÓM MỚI CPR QUÁ CAO', badge: `CPR ${k(t.cpr)} · ${t.r} KQ`,
+            impact: t.s - t.r * K,
+            reasons: [
+              `Nhóm mới: ${t.r} kết quả nhưng CPR ${vnd(t.cpr)} — gấp ${xf(t.cpr / K)} mục tiêu ${k(K)} (đã tiêu ${k(t.s)}).`,
+              `Nhóm mới chạy đắt từ đầu rất khó cải thiện — nên tắt và thử content/tệp khác.`
+            ],
+            action: killPauseAct, alts: [] };
+        }
         // RULE 2: Nhóm mới đã qua 2 ngày, chỉ số OK nhưng vẫn 0 KQ → Tắt
         if (!rec) {
           const ydIdx = today ? 1 : 2;
@@ -2119,15 +2131,27 @@ function runEngine() {
             ],
             action: killPauseAct, alts: [] };
         }
-        // RULE 5: Nhóm cũ, CPR trung bình 3 ngày (T+R) > 200k — cảnh báo dù không tắt hẳn
+        // RULE 5: Nhóm cũ, CPR trung bình 3 ngày (T+R) > 200k
+        // > K*2.3 (~300k) → TẮT | 200k–300k → CẢNH BÁO
         if (!rec && total3r > 0 && total3s >= K * 1.5) {
           const avgCpr3 = total3s / total3r;
-          if (avgCpr3 > 200000) {
+          if (avgCpr3 > K * 2.3) {
+            // CPR TB 3 ngày quá cao → TẮT
+            rec = { type: 'kill', title: 'TẮT – CPR 3 NGÀY QUÁ CAO', badge: `TB ${k(avgCpr3)} · ${total3r} KQ`,
+              impact: total3s - total3r * K,
+              reasons: [
+                `CPR trung bình 3 ngày: ${vnd(avgCpr3)} — gấp ${xf(avgCpr3 / K)} mục tiêu ${k(K)} (tiêu ${k(total3s)}, chỉ ${total3r} kết quả).`,
+                t.cpr > 0 ? `${today ? 'Hôm nay' : 'Hôm qua'}: CPR ${k(t.cpr)} · 3 ngày trước: ${r.r > 0 ? 'CPR ' + k(r.cpr) : '0 KQ'} — ${r.r > 0 && t.cpr > r.cpr ? 'đang tệ dần.' : r.r > 0 ? 'không cải thiện.' : 'không có kết quả.'}` : `3 ngày trước: ${r.r > 0 ? 'CPR ' + k(r.cpr) : '0 KQ'}.`,
+                `Mỗi lead đắt hơn ${xf(avgCpr3 / K)} mục tiêu — tiếp tục chạy sẽ lãng phí ngân sách. Nên tắt và chuyển sang content/tệp mới.`
+              ],
+              action: killPauseAct, alts: [] };
+          } else if (avgCpr3 > 200000) {
+            // CPR TB vẫn cao nhưng chưa tới ngưỡng tắt → cảnh báo
             rec = { type: 'watch', title: '⚠️ CPR TB 3 NGÀY CAO', badge: `TB ${k(avgCpr3)} · ${total3r} KQ`,
               impact: total3s,
               reasons: [
                 `CPR trung bình 3 ngày: ${vnd(avgCpr3)} (tiêu ${k(total3s)}, ra ${total3r} kết quả) — cao hơn mục tiêu ${pct((avgCpr3 / K - 1) * 100, 0)}.`,
-                t.cpr > 0 ? `Hôm nay CPR ${k(t.cpr)} · 3 ngày trước CPR ${k(r.cpr)} — xu hướng ${t.cpr > r.cpr ? 'đang tệ dần' : 'đang cải thiện'}.` : '3 ngày trước CPR ' + k(r.cpr) + '.',
+                t.cpr > 0 ? `${today ? 'Hôm nay' : 'Hôm qua'} CPR ${k(t.cpr)} · 3 ngày trước CPR ${r.r > 0 ? k(r.cpr) : '—'} — xu hướng ${t.cpr > r.cpr ? 'đang tệ dần' : 'đang cải thiện'}.` : '3 ngày trước CPR ' + k(r.cpr) + '.',
                 'Nếu không cải thiện trong 1–2 ngày tới nên cân nhắc tắt và làm lại content/tệp.'
               ] };
           }
@@ -2568,13 +2592,18 @@ function renderTodo() {
   const cnt = t => act.filter(r => r.type === t && !doneMap[r.key]).length;
   const waste = act.filter(r => r.type === 'kill' && !doneMap[r.key]).reduce((a, r) => a + r.t.s, 0);
   const chip = (t, n, lbl, x) => `<button class="chip ${t} ${recFilter === t ? 'sel' : ''}" data-filter="${t}"><div class="n num">${n}</div><div class="t">${lbl}</div><div class="x">${x}</div></button>`;
+  // Lấy danh sách chiến dịch duy nhất từ RECS
+  const campNames = [...new Set(act.map(r => recCampName(r)).filter(Boolean))].sort();
+  // Nếu campFilter hiện tại không còn trong danh sách → reset
+  if (campFilter !== 'all' && !campNames.includes(campFilter)) campFilter = 'all';
+  const campSelect = campNames.length > 1 ? `<select id="campFilterSel" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);max-width:180px"><option value="all">Tất cả chiến dịch</option>${campNames.map(c => `<option value="${esc(c)}" ${campFilter === c ? 'selected' : ''}>${esc(c.length > 30 ? c.slice(0, 28) + '…' : c)}</option>`).join('')}</select>` : '';
   $('chipsBox').innerHTML = `<div class="chips">
     ${chip('kill', cnt('kill'), 'Cần tắt', waste ? 'đang đốt ' + k(waste) : '&nbsp;')}
     ${chip('cut', cnt('cut'), 'Giảm', '&nbsp;')}
     ${chip('scale', cnt('scale'), 'Tăng', '&nbsp;')}
     ${chip('watch', cnt('watch'), 'Xem lại', '&nbsp;')}</div>
     <div class="row between" style="margin-top:10px">
-      <span class="xs muted">${recFilter !== 'all' ? '<button class="lnk xs" data-filter="all" style="padding:0">← Xem tất cả</button>' : ''}</span>
+      <span class="row" style="gap:6px">${recFilter !== 'all' ? '<button class="lnk xs" data-filter="all" style="padding:0">← Xem tất cả</button>' : ''}${campSelect}</span>
       <span class="row" style="gap:4px">
         <span class="xs muted" style="margin-right:2px">Sắp xếp:</span>
         <button class="btn xs ${recSort === 'priority' ? 'p' : ''}" data-recsort="priority" style="padding:4px 8px;font-size:11px">Ưu tiên</button>
@@ -2586,6 +2615,7 @@ function renderTodo() {
 
   const list = (() => {
     let filtered = act.filter(r => recFilter === 'all' || r.type === recFilter);
+    if (campFilter !== 'all') filtered = filtered.filter(r => recCampName(r) === campFilter);
     if (recSort === 'spend') filtered = [...filtered].sort((a, b) => b.t.s - a.t.s);
     else if (recSort === 'cpr') filtered = [...filtered].sort((a, b) => {
       const ca = a.t.r ? a.t.cpr : 1e15, cb = b.t.r ? b.t.cpr : 1e15;
@@ -3622,6 +3652,7 @@ document.addEventListener('click', ev => {
   if (ds.focus) { focusDay = ds.focus; selected.clear(); renderAll(); return; }
   if (ds.filter) { recFilter = recFilter === ds.filter ? 'all' : ds.filter; renderTodo(); return; }
   if (ds.recsort) { recSort = ds.recsort; renderTodo(); return; }
+  if (ds.campfilter) { campFilter = ds.campfilter; renderTodo(); return; }
   if (ds.qdpreset) { applyQdPreset(ds.qdpreset); return; }
   if (ds.pacef) { amFilter = ds.pacef === 'clear' || amFilter === ds.pacef ? 'onspent' : ds.pacef; $('amFilter').value = amFilter; renderAmTable(); return; }
   if (ds.cr) { openCreative(ds.cr); return; }
@@ -3656,7 +3687,7 @@ document.addEventListener('click', ev => {
     case 'datePicker': openDatePicker(); break;
     case 'copyReport': openReport(); break;
     case 'closeSheet': closeSheet(); break;
-    case 'selectAll': RECS.filter(r => !r.snoozed && r.action && !doneMap[r.key] && (recFilter === 'all' || r.type === recFilter)).forEach(r => selected.add(r.key)); renderTodo(); renderBulk(); break;
+    case 'selectAll': RECS.filter(r => !r.snoozed && r.action && !doneMap[r.key] && (recFilter === 'all' || r.type === recFilter) && (campFilter === 'all' || recCampName(r) === campFilter)).forEach(r => selected.add(r.key)); renderTodo(); renderBulk(); break;
     case 'bulkClear': selected.clear(); renderTodo(); renderBulk(); break;
     case 'amOff': amBulk('off'); break;
     case 'amOn': amBulk('on'); break;
@@ -3681,6 +3712,9 @@ document.addEventListener('click', ev => {
     case 'saveSettings': saveSettings(); break;
     case 'resetRules': ['killX', 'cutX', 'scaleX', 'upPct', 'downPct', 'freqMax', 'ctrMin'].forEach(key => { S[key] = DEFAULT_SETTINGS[key]; }); LS.set('ao_settings', S); renderSettings(); toast('Đã khôi phục ngưỡng mặc định', 'ok'); break;
   }
+});
+document.addEventListener('change', ev => {
+  if (ev.target.id === 'campFilterSel') { campFilter = ev.target.value; renderTodo(); }
 });
 $('perfSearch').addEventListener('input', e => { perfQuery = e.target.value.trim(); renderPerf(); });
 $('amFilter').addEventListener('change', e => { amFilter = e.target.value; renderAmTable(); });
