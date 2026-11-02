@@ -2133,7 +2133,9 @@ function runEngine() {
         }
         // RULE 5: Nhóm cũ, CPR trung bình 3 ngày (T+R) > 200k
         // > K*2.3 (~300k) → TẮT | 200k–300k → CẢNH BÁO
-        if (!rec && total3r > 0 && total3s >= K * 1.5) {
+        // Bỏ qua nếu hôm nay có KQ và CPR hôm nay ≤ K (đang hồi phục)
+        const todayRecovering = t.r > 0 && t.cpr <= K;
+        if (!rec && total3r > 0 && total3s >= K * 1.5 && !todayRecovering) {
           const avgCpr3 = total3s / total3r;
           if (avgCpr3 > K * 2.3) {
             // CPR TB 3 ngày quá cao → TẮT
@@ -2596,7 +2598,7 @@ function renderTodo() {
   const campNames = [...new Set(act.map(r => recCampName(r)).filter(Boolean))].sort();
   // Nếu campFilter hiện tại không còn trong danh sách → reset
   if (campFilter !== 'all' && !campNames.includes(campFilter)) campFilter = 'all';
-  const campSelect = campNames.length > 1 ? `<select id="campFilterSel" style="font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);max-width:180px"><option value="all">Tất cả chiến dịch</option>${campNames.map(c => `<option value="${esc(c)}" ${campFilter === c ? 'selected' : ''}>${esc(c.length > 30 ? c.slice(0, 28) + '…' : c)}</option>`).join('')}</select>` : '';
+  const campSelect = campNames.length > 1 ? `<span style="position:relative;display:inline-flex;align-items:center"><input id="campFilterInp" type="text" placeholder="🔍 Tìm chiến dịch…" value="${campFilter !== 'all' ? esc(campFilter) : ''}" style="font-size:11px;padding:4px 24px 4px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bg2);color:var(--fg);width:180px">${campFilter !== 'all' ? '<button id="campFilterClr" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fg);cursor:pointer;font-size:13px;padding:0 2px;line-height:1">✕</button>' : ''}</span>` : '';
   $('chipsBox').innerHTML = `<div class="chips">
     ${chip('kill', cnt('kill'), 'Cần tắt', waste ? 'đang đốt ' + k(waste) : '&nbsp;')}
     ${chip('cut', cnt('cut'), 'Giảm', '&nbsp;')}
@@ -2615,7 +2617,7 @@ function renderTodo() {
 
   const list = (() => {
     let filtered = act.filter(r => recFilter === 'all' || r.type === recFilter);
-    if (campFilter !== 'all') filtered = filtered.filter(r => recCampName(r) === campFilter);
+    if (campFilter !== 'all') { const q = campFilter.toLowerCase(); filtered = filtered.filter(r => recCampName(r).toLowerCase().includes(q)); }
     if (recSort === 'spend') filtered = [...filtered].sort((a, b) => b.t.s - a.t.s);
     else if (recSort === 'cpr') filtered = [...filtered].sort((a, b) => {
       const ca = a.t.r ? a.t.cpr : 1e15, cb = b.t.r ? b.t.cpr : 1e15;
@@ -2624,7 +2626,7 @@ function renderTodo() {
     return filtered;
   })();
   if (!list.length) {
-    $('recList').innerHTML = `<div class="card empty">${K || currentProject === 'ALL' ? '✅ Không có việc gấp' + (recFilter !== 'all' ? ' trong mục này' : '') + '. Tài khoản đang chạy trong ngưỡng an toàn.' : 'Đặt CPR mục tiêu để app bắt đầu đề xuất.'}</div>`;
+    $('recList').innerHTML = `<div class="card empty">${K || currentProject === 'ALL' ? '✅ Không có việc gấp' + (recFilter !== 'all' || campFilter !== 'all' ? ' với bộ lọc hiện tại' : '') + '. Tài khoản đang chạy trong ngưỡng an toàn.' : 'Đặt CPR mục tiêu để app bắt đầu đề xuất.'}</div>`;
   } else {
     $('recList').innerHTML = '<div class="stack">' + list.map(recCard).join('') + '</div>';
   }
@@ -2665,6 +2667,33 @@ function recCard(r) {
     <div class="bd">
       <div class="row" style="align-items:flex-start;gap:10px">${thumb}<div class="grow" data-open="${e.level}:${e.id}" style="cursor:pointer"><div class="nm clamp2">${esc(e.name)} <span class="lnk xs">›</span></div><div class="xs muted trunc" style="margin-top:2px">${lvlTxt} · ${esc(e.accName)}${e.sub ? ' · ' + esc(e.sub) : ''}${post}</div></div></div>
       <ul>${r.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      ${(() => {
+        // Chi tiết lead từng ngày
+        if (!D || !D.days || e.level === 'ad') return '';
+        const today2 = focusDay === 'today';
+        const dayIdxs = today2 ? [0, 1, 2, 3] : [1, 2, 3, 4];
+        const dayData = dayIdxs.map(i => {
+          if (!D.days[i]) return null;
+          const d = D.days[i];
+          let m;
+          if (e.level === 'campaign') {
+            m = emptyM();
+            Object.values(D.ins.adset).forEach(x => { if (x.campaignId === e.id && x.d[d]) addInto(m, x.d[d]); });
+            fin(m);
+          } else {
+            const src = D.ins.adset[e.id];
+            if (!src) return null;
+            m = agg(src, [d]);
+          }
+          return { d, m };
+        }).filter(Boolean);
+        if (!dayData.length) return '';
+        return '<div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">' + dayData.map(x => {
+          const lbl = x.d === D.days[0] ? 'H.nay' : ddmm(x.d);
+          const cls = !r.K || !x.m.r ? 'faint' : x.m.cpr <= r.K ? 'good' : 'bad';
+          return `<div style="flex:1;min-width:60px;padding:5px 6px;background:var(--bg);border-radius:6px;text-align:center"><div class="xs muted">${lbl}</div><div class="sm num b">${x.m.r} <span class="xs">KQ</span></div><div class="xs num ${cls}">${x.m.s > 0 ? k(x.m.s) : '—'}${x.m.r ? ' · ' + k(x.m.cpr) : ''}</div></div>`;
+        }).join('') + '</div>';
+      })()}
       <div class="mgrid">${metricBox(focusDay === 'today' ? 'Hôm nay' : 'Hôm qua', r.t, r.K)}${metricBox('3 ngày trước', r.r, r.K)}${ctrBox}</div>${budgetLine}
       ${done ? `<div class="done">✓ ${esc(done.label)} lúc ${hhmm(done.ts)}<span class="grow"></span><button class="lnk" data-undo="${done.id}">Hoàn tác</button></div>` : ''}
       <div class="acts">${acts.join('')}</div>
@@ -3687,7 +3716,7 @@ document.addEventListener('click', ev => {
     case 'datePicker': openDatePicker(); break;
     case 'copyReport': openReport(); break;
     case 'closeSheet': closeSheet(); break;
-    case 'selectAll': RECS.filter(r => !r.snoozed && r.action && !doneMap[r.key] && (recFilter === 'all' || r.type === recFilter) && (campFilter === 'all' || recCampName(r) === campFilter)).forEach(r => selected.add(r.key)); renderTodo(); renderBulk(); break;
+    case 'selectAll': { const q2 = campFilter !== 'all' ? campFilter.toLowerCase() : ''; RECS.filter(r => !r.snoozed && r.action && !doneMap[r.key] && (recFilter === 'all' || r.type === recFilter) && (!q2 || recCampName(r).toLowerCase().includes(q2))).forEach(r => selected.add(r.key)); renderTodo(); renderBulk(); break; }
     case 'bulkClear': selected.clear(); renderTodo(); renderBulk(); break;
     case 'amOff': amBulk('off'); break;
     case 'amOn': amBulk('on'); break;
@@ -3713,8 +3742,18 @@ document.addEventListener('click', ev => {
     case 'resetRules': ['killX', 'cutX', 'scaleX', 'upPct', 'downPct', 'freqMax', 'ctrMin'].forEach(key => { S[key] = DEFAULT_SETTINGS[key]; }); LS.set('ao_settings', S); renderSettings(); toast('Đã khôi phục ngưỡng mặc định', 'ok'); break;
   }
 });
-document.addEventListener('change', ev => {
-  if (ev.target.id === 'campFilterSel') { campFilter = ev.target.value; renderTodo(); }
+document.addEventListener('input', ev => {
+  if (ev.target.id === 'campFilterInp') {
+    const v = ev.target.value.trim();
+    campFilter = v || 'all';
+    renderTodo();
+    // Re-focus input after render
+    const inp = $('campFilterInp');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+});
+document.addEventListener('click', ev => {
+  if (ev.target.id === 'campFilterClr') { campFilter = 'all'; renderTodo(); }
 });
 $('perfSearch').addEventListener('input', e => { perfQuery = e.target.value.trim(); renderPerf(); });
 $('amFilter').addEventListener('change', e => { amFilter = e.target.value; renderAmTable(); });
