@@ -2187,7 +2187,11 @@ function runEngine() {
         }
       }
       // SCALE: cả nhóm mới & cũ, chỉ áp dụng ABO
-      if (!rec && bt && !isCBO && t.r >= 2 && t.cpr <= S.scaleX * K && t.s >= K * 0.8 && ((r.r >= 2 && r.cpr <= K * 1.1) || (t.r >= 4 && t.cpr <= 0.6 * K))) {
+      // Điều kiện chính: ≥2 KQ hôm nay + CPR < 100k → đủ điều kiện tăng NS
+      // Hoặc CPR ≤ K (130k) nhưng cần thêm lịch sử 3 ngày ổn định
+      const scaleOk = t.r >= 2 && t.cpr < 100000;
+      const scaleWithHistory = t.r >= 2 && t.cpr <= K && r.r >= 2 && r.cpr <= K * 1.1;
+      if (!rec && bt && !isCBO && (scaleOk || scaleWithHistory)) {
         if (f7.freq >= S.freqMax) {
           rec = { type: 'watch', title: 'NHÂN BẢN, ĐỪNG TĂNG', badge: 'Tần suất cao', impact: t.r,
             reasons: [`CPR ${vnd(t.cpr)} rất tốt nhưng tần suất 7 ngày đã ${f7.freq.toFixed(1).replace('.', ',')} — tăng ngân sách lúc này dễ làm CPR tăng vọt.`, 'Nên nhân bản nhóm sang tệp mới / lookalike thay vì tăng ngân sách nhóm cũ.'] };
