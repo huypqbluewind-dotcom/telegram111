@@ -3728,7 +3728,7 @@ document.addEventListener('click', ev => {
     const inp = document.querySelector(`[data-bkey="${CSS.escape(ds.mbud)}"]`);
     const val = inp ? +inp.value : 0;
     if (!val || val < 1000) { toast('Nhập số ngân sách hợp lệ (tối thiểu 1.000 đ)', 'err'); return; }
-    const a = { kind: 'set_budget', id: r.budget.id, type: r.budget.type, name: r.ent.name, value: val };
+    const a = { kind: 'set_budget', id: r.budget.id, type: r.budget.type, name: r.ent.name, from: r.budget.cur, to: val };
     confirmActions([recItem(r, a)]); return;
   }
   switch (ds.act) {
