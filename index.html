@@ -1595,6 +1595,7 @@ function k(n) {
   return Math.round(n) + 'đ';
 }
 function pct(n, d = 2) { return (isFinite(n) ? n : 0).toFixed(d).replace('.', ',') + '%'; }
+function dotFmt(n) { return n ? nf.format(Math.round(+n)) : ''; }
 function xf(n) { return (isFinite(n) ? n : 0).toFixed(1).replace('.', ',') + '×'; }
 function round1000(n) { return Math.round(n / 1000) * 1000; }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -2191,6 +2192,29 @@ function runEngine() {
             alts: [killPauseAct] };
         }
       }
+      // RULE 7: Kết quả trong ngày đắt — ABO
+      // 7A: Có >1 kết quả mà CPR > 190k → Giảm 50% NS
+      if (!rec && bt && !isCBO && t.r > 1 && t.cpr > 190000) {
+        rec = { type: 'cut', title: 'GIẢM 50% NS – KẾT QUẢ ĐẮT', badge: `CPR ${k(t.cpr)} · ${t.r} KQ`,
+          impact: t.s - t.r * K,
+          reasons: [
+            `${t.r} kết quả trong ngày với CPR ${vnd(t.cpr)} — cao hơn ngưỡng 190k (đã tiêu ${k(t.s)}).`,
+            `Nhóm đang ra số nhưng giá quá đắt. Giảm 50% ngân sách để kiểm soát chi phí, nếu không cải thiện hãy tắt.`
+          ],
+          action: budgetAction(bt, -50, as.name),
+          alts: [killPauseAct] };
+      }
+      // 7B: 0 kết quả mà tiêu > 170k → Giảm 50% NS
+      if (!rec && bt && !isCBO && t.r === 0 && t.s > 170000) {
+        rec = { type: 'cut', title: 'GIẢM 50% NS – TIÊU NHIỀU 0 KQ', badge: `${k(t.s)} · 0 KQ`,
+          impact: t.s,
+          reasons: [
+            `Đã tiêu ${vnd(t.s)} trong ngày mà chưa có kết quả nào — vượt ngưỡng 170k.`,
+            `Giảm 50% ngân sách để hạn chế lãng phí. Theo dõi thêm — nếu vẫn không ra kết quả nên cân nhắc tắt nhóm.`
+          ],
+          action: budgetAction(bt, -50, as.name),
+          alts: [killPauseAct] };
+      }
       // RULE 6: Bất kỳ nhóm nào, 2 ngày liên tiếp chi > 200k mà 0 kết quả (cảnh báo sớm)
       if (!rec) {
         const ydIdx6 = today ? 1 : 2;
@@ -2719,7 +2743,7 @@ function recCard(r) {
   const acts = [];
   if (!done && r.action) acts.push(`<button class="btn ${r.type === 'watch' ? 'p' : r.type}" data-run="${esc(r.key)}" data-i="-1">${esc(actionLabel(r.action))}</button>`);
   if ((r.type === 'scale' || r.type === 'watch') && !done && r.budget) {
-    acts.push(`<span class="manual-bud-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="xs muted">Hoặc nhập tay:</span><input type="number" inputmode="numeric" class="budget-inp" data-bkey="${esc(r.key)}" placeholder="${r.budget.cur}" min="1000" step="1000" style="width:130px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--foreground)"><button class="btn" data-mbud="${esc(r.key)}" style="padding:7px 14px">Áp dụng</button></span>`);
+    acts.push(`<span class="manual-bud-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="xs muted">Hoặc nhập tay:</span><input type="text" inputmode="numeric" class="budget-inp" data-bkey="${esc(r.key)}" placeholder="${dotFmt(r.budget.cur)}" style="width:130px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--foreground)"><button class="btn" data-mbud="${esc(r.key)}" style="padding:7px 14px">Áp dụng</button></span>`);
   }
   if (!done) (r.alts || []).forEach((a, i) => acts.push(`<button class="btn" data-run="${esc(r.key)}" data-i="${i}">${esc(actionLabel(a))}</button>`));
   if (!done && !r.snoozed) acts.push(`<button class="btn ghost" data-snooze="${esc(r.key)}">Để sau</button>`);
@@ -3798,7 +3822,7 @@ document.addEventListener('click', ev => {
   if (ds.mbud) {
     const r = RECS.find(x => x.key === ds.mbud); if (!r || !r.budget) return;
     const inp = document.querySelector(`[data-bkey="${CSS.escape(ds.mbud)}"]`);
-    const val = inp ? +inp.value : 0;
+    const val = inp ? +(inp.value.replace(/\./g, '')) : 0;
     if (!val || val < 1000) { toast('Nhập số ngân sách hợp lệ (tối thiểu 1.000 đ)', 'err'); return; }
     const a = { kind: 'set_budget', id: r.budget.id, type: r.budget.type, name: r.ent.name, from: r.budget.cur, to: val };
     confirmActions([recItem(r, a)]); return;
@@ -3834,6 +3858,19 @@ document.addEventListener('click', ev => {
     case 'saveSettings': saveSettings(); break;
     case 'resetRules': ['killX', 'cutX', 'scaleX', 'upPct', 'downPct', 'freqMax', 'ctrMin'].forEach(key => { S[key] = DEFAULT_SETTINGS[key]; }); LS.set('ao_settings', S); renderSettings(); toast('Đã khôi phục ngưỡng mặc định', 'ok'); break;
   }
+});
+// Budget input — hiện dấu chấm phân cách hàng nghìn khi nhập
+document.addEventListener('input', ev => {
+  if (!ev.target.classList.contains('budget-inp')) return;
+  const raw = ev.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+  const num = parseInt(raw, 10);
+  if (!raw) { ev.target.value = ''; return; }
+  const pos = ev.target.selectionStart;
+  const oldLen = ev.target.value.length;
+  ev.target.value = dotFmt(num);
+  const newLen = ev.target.value.length;
+  const newPos = Math.max(0, pos + (newLen - oldLen));
+  ev.target.setSelectionRange(newPos, newPos);
 });
 // Campaign search — input cố định, không bị rebuild
 (function() {
