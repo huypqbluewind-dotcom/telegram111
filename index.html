@@ -208,7 +208,7 @@ details summary{cursor:pointer;list-style:none} details summary::-webkit-details
 .amtool select.field{flex:1 1 auto;min-width:0}
 .amtool label{flex:0 0 auto;white-space:nowrap}
 @media(min-width:480px){.amtool input.field{flex:1 1 0}}
-.amwrap{overflow-x:auto;overflow-y:visible;border:1px solid var(--border);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch}
+.amwrap{overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch}
 table.am{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:100%}
 table.am th,table.am td{padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:right;vertical-align:middle;background:var(--card)}
 table.am thead th{position:sticky;top:0;z-index:3;background:#1a2438;color:#b6c2d6;font-weight:700;font-size:11.5px;cursor:pointer;user-select:none;border-bottom:1px solid #33425f}
@@ -216,14 +216,8 @@ table.am thead th .ar{color:#7fb2ff;font-size:10px}
 table.am thead th.sorted{color:#fff}
 table.am th.nm,table.am td.nm{position:sticky;left:0;z-index:2;text-align:left;min-width:250px;max-width:300px;white-space:normal;box-shadow:1px 0 0 var(--border)}
 table.am thead th.nm{z-index:4}
-table.am tfoot{display:none}
-#amFoot{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;background:#1a2438;border-top:2px solid #33425f;box-shadow:0 -4px 12px rgba(0,0,0,.5);padding:8px 12px;font-size:12.5px;font-weight:700}
-#amFoot .af-row{display:flex;gap:8px;align-items:center;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
-#amFoot .af-label{flex:0 0 auto;color:#b6c2d6;font-size:11.5px}
-#amFoot .af-val{color:#e8ecf2}
-#amFoot .af-sep{color:#33425f}
-.amfoot-on #amFoot{display:block}
-.amfoot-on #v-perf{padding-bottom:52px}
+table.am tfoot td{position:sticky;bottom:0;z-index:3;background:#1a2438;font-weight:700;border-top:2px solid #33425f;border-bottom:0;box-shadow:0 -2px 8px rgba(0,0,0,.4)}
+table.am tfoot td.nm{z-index:5}
 table.am tbody tr:hover td{background:#172136}
 table.am tbody tr.sel td{background:#14274a}
 table.am td.l{text-align:left}
@@ -398,6 +392,9 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
       <select id="amFilter" class="field" style="width:auto">
         <option value="onspent">Đang bật / có chi tiêu</option><option value="spent_today">💰 Tiêu tiền hôm nay</option><option value="on">Chỉ đang bật</option><option value="all">Tất cả</option><option value="pace_slow">⏱ Tiêu chậm (hôm nay)</option><option value="pace_fast">⏱ Tiêu nhanh / sắp hết NS</option>
       </select>
+      <select id="amLimitSel" class="field" style="width:auto">
+        <option value="10">10 hàng</option><option value="20">20 hàng</option><option value="30">30 hàng</option><option value="50">50 hàng</option><option value="100">100 hàng</option><option value="200">200 hàng</option>
+      </select>
       <label class="row xs b" style="gap:6px;white-space:nowrap;padding:0 4px"><input type="checkbox" id="amCmp" class="chk" style="width:16px;height:16px" checked> So sánh kỳ trước</label>
     </div>
     <div id="amChips" class="row wrapf" style="gap:6px;margin:0 0 8px"></div>
@@ -411,7 +408,6 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
     <div id="amTable" class="amwrap"></div>
     <div class="xs muted" style="margin:8px 2px">Bấm <b>tên</b> để xem cấp bên trong · bấm <b>📊 Chi tiết</b> để xem 4 mốc thời gian · bấm <b>ngân sách</b> để sửa · kéo ngang để xem thêm cột.</div>
   </section>
-  <div id="amFoot"></div>
 
   <!-- ===================== TAB: NHẬT KÝ ===================== -->
   <section id="v-log" class="hidden">
@@ -1906,7 +1902,7 @@ function prevScale(w) { return w === 'today' ? expectedFrac() : 1; }
 const PREV_LABEL = { today: 'hôm qua cùng giờ', yesterday: 'hôm kia', last3: '3 ngày trước đó', last7: '7 ngày trước đó' };
 function hasPrev(w) { return prevDates(w).every(x => !!x); }
 function aggPrev(entry, w) { const m = emptyM(); if (entry && entry.d) prevDates(w).forEach(d => d && addInto(m, entry.d[d])); return fin(scaleM(m, prevScale(w))); }
-function projAggPrev(proj, w) { const m = emptyM(); Object.values(D.ins.adset).forEach(e => { if (proj === 'ALL' || e.project === proj) prevDates(w).forEach(d => d && addInto(m, e.d[d])); }); return fin(scaleM(m, prevScale(w))); }
+function projAggPrev(proj, w) { const m = emptyM(); Object.values(D.ins.adset).forEach(e => { if (!D.adsets[e.id]) return; if (proj === 'ALL' || e.project === proj) prevDates(w).forEach(d => d && addInto(m, e.d[d])); }); return fin(scaleM(m, prevScale(w))); }
 // kind: 'up' = tăng là tốt, 'down' = giảm là tốt, 'n' = trung tính
 function dlt(cur, prev, kind) {
   if (!prev || !isFinite(prev) || !isFinite(cur) || (!cur && !prev)) return '';
@@ -1918,7 +1914,7 @@ function dlt(cur, prev, kind) {
 
 function projAgg(proj, dates) {
   const m = emptyM();
-  Object.values(D.ins.adset).forEach(e => { if (proj === 'ALL' || e.project === proj) dates.forEach(d => addInto(m, e.d[d])); });
+  Object.values(D.ins.adset).forEach(e => { if (!D.adsets[e.id]) return; if (proj === 'ALL' || e.project === proj) dates.forEach(d => addInto(m, e.d[d])); });
   return fin(m);
 }
 function autoTarget(proj) {
@@ -2795,8 +2791,10 @@ let amLvl = 'campaign';
 const amSel = { campaign: new Set(), adset: new Set(), ad: new Set() };
 let amSort = { k: 's', d: -1 };
 let amFilter = 'onspent';
+let amLimit = parseInt(LS.get('ao_limit', '50')) || 50;
 let amCompare = LS.get('ao_cmp', true);
 const AM_LVL_NAME = { campaign: 'chiến dịch', adset: 'nhóm quảng cáo', ad: 'quảng cáo' };
+let totalAmRows = 0;
 
 function isOn(lvl, id) {
   if (D.override && id in D.override) return D.override[id];
@@ -2926,12 +2924,12 @@ function amRows(lvl) {
 }
 
 function renderPerf() {
-  if (!D) { $('perfKpi').innerHTML = ''; $('amTable').innerHTML = '<div class="empty">Chưa có dữ liệu.</div>'; $('amTabs').innerHTML = ''; $('amFoot').innerHTML = ''; return; }
+  if (!D) { $('perfKpi').innerHTML = ''; $('amTable').innerHTML = '<div class="empty">Chưa có dữ liệu.</div>'; $('amTabs').innerHTML = ''; return; }
   $('dateLbl').textContent = curLabel(); syncQdBar();
   $('dateCmp').textContent = amCompare ? 'So với ' + prevLabel() : '';
   if (!rangeReady()) {
     ensureRange();
-    $('amTabs').innerHTML = ''; $('perfKpi').innerHTML = ''; $('ovMini').innerHTML = ''; $('amFoot').innerHTML = '';
+    $('amTabs').innerHTML = ''; $('perfKpi').innerHTML = ''; $('ovMini').innerHTML = '';
     $('amTable').innerHTML = '<div class="empty"><span class="spin" style="display:inline-block">⟳</span> Đang tải số liệu ' + esc(curLabel()) + '…</div>';
     return;
   }
@@ -2977,10 +2975,21 @@ function nameOf(lvl, id) {
   return (D.ads[id] || D.ins.ad[id] || {}).name || id;
 }
 
+function sizeAmWrap() {
+  const w = $('amTable'); if (!w) return;
+  const rect = w.getBoundingClientRect();
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const avail = vh - rect.top - 8;
+  w.style.maxHeight = Math.max(250, avail) + 'px';
+}
+window.addEventListener('resize', () => { if (currentTab === 'perf') sizeAmWrap(); });
+
 function renderAmTable() {
   $('crNote').classList.toggle('hidden', amLvl !== 'creative'); $('amFilter').classList.toggle('hidden', amLvl === 'creative');
   if (amLvl === 'creative') { renderCreativeTable(); return; }
-  const rows = amRows(amLvl);
+  const allRows = amRows(amLvl);
+  totalAmRows = allRows.length;
+  const rows = amLimit >= totalAmRows ? allRows : allRows.slice(0, amLimit);
   const sel = amSel[amLvl];
   const recMap = {}; RECS.forEach(r => { if (!doneMap[r.key]) recMap[r.ent.level + ':' + r.ent.id] = r; });
   const REC_LBL = { kill: 'Nên tắt', cut: 'Nên giảm', scale: 'Nên tăng', watch: 'Xem lại' };
@@ -3013,17 +3022,14 @@ function renderAmTable() {
     h += `<td><b class="${dcls === 'g' ? 'good' : dcls === 'a' ? 'warn' : dcls === 'r' ? 'bad' : ''}">${r.m.r ? vnd(r.m.cpr) : '—'}</b>${D_(r.m.cpr, 'cpr', 'down', r.m.r && cp && cp.r)}</td>`;
     h += `<td>${r.m.s ? vnd(r.m.s) : '0đ'}${D_(r.m.s, 's', 'n', true)}</td><td>${nf.format(r.m.imp)}${D_(r.m.imp, 'imp', 'n', true)}</td><td>${nf.format(r.m.lc)}${D_(r.m.lc, 'lc', 'up', true)}</td><td>${r.m.imp ? pct(r.m.ctrL) : '—'}${D_(r.m.ctrL, 'ctrL', 'up', r.m.imp)}</td><td>${r.m.lc ? vnd(r.m.cpc) : '—'}${D_(r.m.cpc, 'cpc', 'down', r.m.lc)}</td><td>${r.m.imp ? vnd(r.m.cpm) : '—'}${D_(r.m.cpm, 'cpm', 'down', r.m.imp)}</td><td>${r.m.lc ? pct(r.m.cr) : '—'}${D_(r.m.cr, 'cr', 'up', r.m.lc && cp && cp.lc)}</td></tr>`;
   });
-  const t = emptyM(), tp = emptyM(); rows.forEach(r => { addInto(t, r.m); if (r.pm) addInto(tp, r.pm); }); fin(t); fin(tp);
+  const t = emptyM(), tp = emptyM(); allRows.forEach(r => { addInto(t, r.m); if (r.pm) addInto(tp, r.pm); }); fin(t); fin(tp);
   const T_ = (cur, key, kind, ok) => amCompare && ok ? dlt(cur, tp[key], kind) : '';
-  h += `</tbody></table>`;
+  h += `</tbody><tfoot><tr><td class="nm"><div>Tổng số kết quả</div><div class="xs faint" style="font-weight:500">Đang hiển thị ${rows.length}/${totalAmRows} ${AM_LVL_NAME[amLvl]}</div></td>
+    <td></td><td></td><td>${t.r ? nf.format(t.r) : '—'}${T_(t.r, 'r', 'up', true)}</td><td>${t.r ? vnd(t.cpr) : '—'}${T_(t.cpr, 'cpr', 'down', t.r && tp.r)}</td><td>${vnd(t.s)}${T_(t.s, 's', 'n', true)}</td><td>${nf.format(t.imp)}${T_(t.imp, 'imp', 'n', true)}</td><td>${nf.format(t.lc)}${T_(t.lc, 'lc', 'up', true)}</td><td>${t.imp ? pct(t.ctrL) : '—'}${T_(t.ctrL, 'ctrL', 'up', t.imp)}</td><td>${t.lc ? vnd(t.cpc) : '—'}${T_(t.cpc, 'cpc', 'down', t.lc)}</td><td>${t.imp ? vnd(t.cpm) : '—'}${T_(t.cpm, 'cpm', 'down', t.imp)}</td><td>${t.lc ? pct(t.cr) : '—'}${T_(t.cr, 'cr', 'up', t.lc && tp.lc)}</td></tr></tfoot></table>`;
   const wrap = $('amTable'); const sx = wrap.scrollLeft, sy = wrap.scrollTop;
   wrap.innerHTML = h; wrap.scrollLeft = sx; wrap.scrollTop = sy;
-  // Fixed footer bar
-  const sep = '<span class="af-sep">·</span>';
-  const fK = scopeTarget().v || 130000;
-  const footH = `<div class="af-row"><span class="af-label">${rows.length} ${AM_LVL_NAME[amLvl]}</span>${sep}<span class="af-val">${t.r ? nf.format(t.r) : '—'} KQ</span>${sep}<span class="af-val">CPR <b class="${!t.r ? '' : t.cpr <= fK ? 'good' : t.cpr <= fK * S.cutX ? 'warn' : 'bad'}">${t.r ? vnd(t.cpr) : '—'}</b></span>${sep}<span class="af-val">${vnd(t.s)}</span>${sep}<span class="af-val">${nf.format(t.imp)} imp</span>${sep}<span class="af-val">CTR ${t.imp ? pct(t.ctrL) : '—'}</span>${sep}<span class="af-val">CPC ${t.lc ? vnd(t.cpc) : '—'}</span>${sep}<span class="af-val">CPM ${t.imp ? vnd(t.cpm) : '—'}</span>${sep}<span class="af-val">CR ${t.lc ? pct(t.cr) : '—'}</span></div>`;
-  $('amFoot').innerHTML = footH;
-  window._amRows = rows;
+  sizeAmWrap();
+  window._amRows = allRows;
   renderPaceSum();
 }
 function renderPaceSum() {
@@ -3196,11 +3202,9 @@ function renderCreativeTable() {
     h += '</tr>';
   });
   const t = emptyM(); rows.forEach(g => addInto(t, g.m)); fin(t);
-  h += `</tbody></table>`;
+  h += `</tbody><tfoot><tr><td class="nm"><div>Tổng số kết quả</div><div class="xs faint" style="font-weight:500">${rows.length} creative · ${esc(curLabel())}</div></td><td></td><td></td><td>${t.r || '—'}</td><td>${t.r ? vnd(t.cpr) : '—'}</td><td>${vnd(t.s)}</td><td>${t.imp ? pct(t.ctrL) : '—'}</td><td>${t.imp ? vnd(t.cpm) : '—'}</td><td>${t.v3 ? pct(t.hook, 1) : '—'}</td><td>${t.v3 ? pct(t.hold, 1) : '—'}</td><td>${t.v3 ? pct(t.comp, 1) : '—'}</td></tr></tfoot></table>`;
   const wrap = $('amTable'); const sx = wrap.scrollLeft; wrap.innerHTML = h; wrap.scrollLeft = sx;
-  // Fixed footer for creative tab
-  const sep = '<span class="af-sep">·</span>';
-  $('amFoot').innerHTML = `<div class="af-row"><span class="af-label">${rows.length} creative</span>${sep}<span class="af-val">${t.r || '—'} KQ</span>${sep}<span class="af-val">CPR ${t.r ? vnd(t.cpr) : '—'}</span>${sep}<span class="af-val">${vnd(t.s)}</span>${sep}<span class="af-val">CTR ${t.imp ? pct(t.ctrL) : '—'}</span>${sep}<span class="af-val">CPM ${t.imp ? vnd(t.cpm) : '—'}</span></div>`;
+  sizeAmWrap();
   window._crList = list;
   $('crNote').innerHTML = `Gom theo: <button class="lnk xs" data-crgroup="content" style="padding:0;${crGroup === 'content' ? 'text-decoration:underline' : 'opacity:.6'}">hình/video thật</button> · <button class="lnk xs" data-crgroup="name" style="padding:0;${crGroup === 'name' ? 'text-decoration:underline' : 'opacity:.6'}">tên quảng cáo</button>
     · Hạng tính theo CPR, chỉ xét creative có ≥ 2 kết quả và đã tiêu ≥ 1× CPR mục tiêu. Chỉ số video tô <b class="good">xanh</b>/<b class="bad">đỏ</b> khi cao/thấp hơn 20% so với trung vị các video của bạn.`;
@@ -3347,7 +3351,7 @@ function curKeys() { return keysFor(PR.since, PR.until); }
 function prevKeys() { const [a, b] = prevRange(); return keysFor(a, b); }
 function prevF() { return PR.preset === 'today' ? expectedFrac() : 1; }
 function aggKeys(entry, keys, f) { const m = emptyM(); if (entry && entry.d) keys.forEach(kk => addInto(m, entry.d[kk])); return fin(scaleM(m, f || 1)); }
-function projAggKeys(proj, keys, f) { const m = emptyM(); Object.values(D.ins.adset).forEach(e => { if (proj === 'ALL' || e.project === proj) keys.forEach(kk => addInto(m, e.d[kk])); }); return fin(scaleM(m, f || 1)); }
+function projAggKeys(proj, keys, f) { const m = emptyM(); Object.values(D.ins.adset).forEach(e => { if (!D.adsets[e.id]) return; if (proj === 'ALL' || e.project === proj) keys.forEach(kk => addInto(m, e.d[kk])); }); return fin(scaleM(m, f || 1)); }
 
 // tải dữ liệu cho khoảng ngày ngoài 15 ngày đã có
 const RANGE_STATE = {};
@@ -3747,7 +3751,6 @@ function ensurePBI() {
 function switchTab(tab) {
   currentTab = tab;
   document.body.classList.toggle('wide', tab === 'perf');
-  document.body.classList.toggle('amfoot-on', tab === 'perf');
   document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   ['todo', 'perf', 'log', 'set'].forEach(t => $('v-' + t).classList.toggle('hidden', t !== tab));
   $('pbiWrap').classList.toggle('hidden', tab !== 'pbi');
@@ -3848,6 +3851,8 @@ document.addEventListener('click', ev => {
 })();
 $('perfSearch').addEventListener('input', e => { perfQuery = e.target.value.trim(); renderPerf(); });
 $('amFilter').addEventListener('change', e => { amFilter = e.target.value; renderAmTable(); });
+$('amLimitSel').value = String(amLimit);
+$('amLimitSel').addEventListener('change', e => { amLimit = parseInt(e.target.value) || 50; LS.set('ao_limit', amLimit); renderAmTable(); });
 $('amCmp').checked = amCompare;
 $('amCmp').addEventListener('change', e => { amCompare = e.target.checked; LS.set('ao_cmp', amCompare); renderPerf(); });
 $('perfOverview').addEventListener('toggle', () => { if ($('perfOverview').open && D) renderCharts(scopeTarget().v); });
