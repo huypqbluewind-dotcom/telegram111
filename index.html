@@ -2133,6 +2133,27 @@ function runEngine() {
               action: killPauseAct, alts: [] };
           }
         }
+        // RULE 7 (nhóm mới): Kết quả trong ngày đắt — ABO
+        if (!rec && bt && !isCBO && t.r > 1 && t.cpr > 190000) {
+          rec = { type: 'cut', title: 'GIẢM 50% NS – KẾT QUẢ ĐẮT', badge: `CPR ${k(t.cpr)} · ${t.r} KQ`,
+            impact: t.s - t.r * K,
+            reasons: [
+              `${t.r} kết quả trong ngày với CPR ${vnd(t.cpr)} — cao hơn ngưỡng 190k (đã tiêu ${k(t.s)}).`,
+              `Nhóm đang ra số nhưng giá quá đắt. Giảm 50% ngân sách để kiểm soát chi phí, nếu không cải thiện hãy tắt.`
+            ],
+            action: budgetAction(bt, -50, as.name),
+            alts: [killPauseAct] };
+        }
+        if (!rec && bt && !isCBO && t.r === 0 && t.s > 170000) {
+          rec = { type: 'cut', title: 'GIẢM 50% NS – TIÊU NHIỀU 0 KQ', badge: `${k(t.s)} · 0 KQ`,
+            impact: t.s,
+            reasons: [
+              `Đã tiêu ${vnd(t.s)} trong ngày mà chưa có kết quả nào — vượt ngưỡng 170k.`,
+              `Giảm 50% ngân sách để hạn chế lãng phí. Theo dõi thêm — nếu vẫn không ra kết quả nên cân nhắc tắt nhóm.`
+            ],
+            action: budgetAction(bt, -50, as.name),
+            alts: [killPauseAct] };
+        }
       } else {
         // RULE 3: Nhóm cũ, 3 ngày tổng ≥400k, 0 KQ → Tắt
         const total3s = (t.s || 0) + (r.s || 0);
@@ -2183,7 +2204,30 @@ function runEngine() {
               ] };
           }
         }
-        // Giảm ngân sách cho nhóm cũ ABO nếu chưa đến ngưỡng tắt
+        // RULE 7: Kết quả trong ngày đắt — ABO (ưu tiên hơn rule giảm NS cũ)
+        // 7A: Có >1 kết quả mà CPR > 190k → Giảm 50% NS
+        if (!rec && bt && !isCBO && t.r > 1 && t.cpr > 190000) {
+          rec = { type: 'cut', title: 'GIẢM 50% NS – KẾT QUẢ ĐẮT', badge: `CPR ${k(t.cpr)} · ${t.r} KQ`,
+            impact: t.s - t.r * K,
+            reasons: [
+              `${t.r} kết quả trong ngày với CPR ${vnd(t.cpr)} — cao hơn ngưỡng 190k (đã tiêu ${k(t.s)}).`,
+              `Nhóm đang ra số nhưng giá quá đắt. Giảm 50% ngân sách để kiểm soát chi phí, nếu không cải thiện hãy tắt.`
+            ],
+            action: budgetAction(bt, -50, as.name),
+            alts: [killPauseAct] };
+        }
+        // 7B: 0 kết quả mà tiêu > 170k → Giảm 50% NS
+        if (!rec && bt && !isCBO && t.r === 0 && t.s > 170000) {
+          rec = { type: 'cut', title: 'GIẢM 50% NS – TIÊU NHIỀU 0 KQ', badge: `${k(t.s)} · 0 KQ`,
+            impact: t.s,
+            reasons: [
+              `Đã tiêu ${vnd(t.s)} trong ngày mà chưa có kết quả nào — vượt ngưỡng 170k.`,
+              `Giảm 50% ngân sách để hạn chế lãng phí. Theo dõi thêm — nếu vẫn không ra kết quả nên cân nhắc tắt nhóm.`
+            ],
+            action: budgetAction(bt, -50, as.name),
+            alts: [killPauseAct] };
+        }
+        // Giảm ngân sách cho nhóm cũ ABO nếu chưa đến ngưỡng tắt (fallback cho CPR < 190k)
         if (!rec && bt && !isCBO && t.s >= 1.5 * K && (t.r === 0 || t.cpr > S.cutX * K) && (r.r === 0 || r.cpr > S.cutX * K * 0.92)) {
           rec = { type: 'cut', title: `GIẢM ${S.downPct}% NGÂN SÁCH`, badge: t.r ? `CPR ${xf(t.cpr / K)} mục tiêu` : 'Chưa ra số', impact: t.s,
             reasons: [t.r ? `CPR ${vnd(t.cpr)} cao hơn mục tiêu ${pct((t.cpr / K - 1) * 100, 0)} (đã tiêu ${k(t.s)}, ${t.r} kết quả).` : `Đã tiêu ${vnd(t.s)} chưa ra kết quả (chưa tới ngưỡng tắt).`,
@@ -2191,29 +2235,6 @@ function runEngine() {
             action: budgetAction(bt, -S.downPct, as.name),
             alts: [killPauseAct] };
         }
-      }
-      // RULE 7: Kết quả trong ngày đắt — ABO
-      // 7A: Có >1 kết quả mà CPR > 190k → Giảm 50% NS
-      if (!rec && bt && !isCBO && t.r > 1 && t.cpr > 190000) {
-        rec = { type: 'cut', title: 'GIẢM 50% NS – KẾT QUẢ ĐẮT', badge: `CPR ${k(t.cpr)} · ${t.r} KQ`,
-          impact: t.s - t.r * K,
-          reasons: [
-            `${t.r} kết quả trong ngày với CPR ${vnd(t.cpr)} — cao hơn ngưỡng 190k (đã tiêu ${k(t.s)}).`,
-            `Nhóm đang ra số nhưng giá quá đắt. Giảm 50% ngân sách để kiểm soát chi phí, nếu không cải thiện hãy tắt.`
-          ],
-          action: budgetAction(bt, -50, as.name),
-          alts: [killPauseAct] };
-      }
-      // 7B: 0 kết quả mà tiêu > 170k → Giảm 50% NS
-      if (!rec && bt && !isCBO && t.r === 0 && t.s > 170000) {
-        rec = { type: 'cut', title: 'GIẢM 50% NS – TIÊU NHIỀU 0 KQ', badge: `${k(t.s)} · 0 KQ`,
-          impact: t.s,
-          reasons: [
-            `Đã tiêu ${vnd(t.s)} trong ngày mà chưa có kết quả nào — vượt ngưỡng 170k.`,
-            `Giảm 50% ngân sách để hạn chế lãng phí. Theo dõi thêm — nếu vẫn không ra kết quả nên cân nhắc tắt nhóm.`
-          ],
-          action: budgetAction(bt, -50, as.name),
-          alts: [killPauseAct] };
       }
       // RULE 6: Bất kỳ nhóm nào, 2 ngày liên tiếp chi > 200k mà 0 kết quả (cảnh báo sớm)
       if (!rec) {
@@ -2742,7 +2763,7 @@ function recCard(r) {
   const budgetLine = r.budget ? `<div class="xs muted" style="margin-top:8px">Ngân sách ${r.budget.type === 'campaign' ? 'CBO' : 'ngày'}: <b style="color:var(--foreground)">${vnd(r.budget.cur)}</b> · CPR mục tiêu ${k(r.K)}</div>` : `<div class="xs muted" style="margin-top:8px">CPR mục tiêu ${k(r.K)}</div>`;
   const acts = [];
   if (!done && r.action) acts.push(`<button class="btn ${r.type === 'watch' ? 'p' : r.type}" data-run="${esc(r.key)}" data-i="-1">${esc(actionLabel(r.action))}</button>`);
-  if ((r.type === 'scale' || r.type === 'watch') && !done && r.budget) {
+  if (!done && r.budget) {
     acts.push(`<span class="manual-bud-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="xs muted">Hoặc nhập tay:</span><input type="text" inputmode="numeric" class="budget-inp" data-bkey="${esc(r.key)}" placeholder="${dotFmt(r.budget.cur)}" style="width:130px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--foreground)"><button class="btn" data-mbud="${esc(r.key)}" style="padding:7px 14px">Áp dụng</button></span>`);
   }
   if (!done) (r.alts || []).forEach((a, i) => acts.push(`<button class="btn" data-run="${esc(r.key)}" data-i="${i}">${esc(actionLabel(a))}</button>`));
