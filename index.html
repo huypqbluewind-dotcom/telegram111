@@ -208,7 +208,7 @@ details summary{cursor:pointer;list-style:none} details summary::-webkit-details
 .amtool select.field{flex:1 1 auto;min-width:0}
 .amtool label{flex:0 0 auto;white-space:nowrap}
 @media(min-width:480px){.amtool input.field{flex:1 1 0}}
-.amwrap{overflow:auto;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px);border:1px solid var(--border);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch}
+.amwrap{overflow-x:auto;overflow-y:visible;border:1px solid var(--border);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch}
 table.am{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:100%}
 table.am th,table.am td{padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:right;vertical-align:middle;background:var(--card)}
 table.am thead th{position:sticky;top:0;z-index:3;background:#1a2438;color:#b6c2d6;font-weight:700;font-size:11.5px;cursor:pointer;user-select:none;border-bottom:1px solid #33425f}
@@ -216,8 +216,14 @@ table.am thead th .ar{color:#7fb2ff;font-size:10px}
 table.am thead th.sorted{color:#fff}
 table.am th.nm,table.am td.nm{position:sticky;left:0;z-index:2;text-align:left;min-width:250px;max-width:300px;white-space:normal;box-shadow:1px 0 0 var(--border)}
 table.am thead th.nm{z-index:4}
-table.am tfoot td{position:sticky;bottom:0;z-index:3;background:#1a2438;font-weight:700;border-top:2px solid #33425f;border-bottom:0;box-shadow:0 -2px 8px rgba(0,0,0,.4)}
-table.am tfoot td.nm{z-index:5}
+table.am tfoot{display:none}
+#amFoot{display:none;position:fixed;bottom:0;left:0;right:0;z-index:50;background:#1a2438;border-top:2px solid #33425f;box-shadow:0 -4px 12px rgba(0,0,0,.5);padding:8px 12px;font-size:12.5px;font-weight:700}
+#amFoot .af-row{display:flex;gap:8px;align-items:center;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
+#amFoot .af-label{flex:0 0 auto;color:#b6c2d6;font-size:11.5px}
+#amFoot .af-val{color:#e8ecf2}
+#amFoot .af-sep{color:#33425f}
+.amfoot-on #amFoot{display:block}
+.amfoot-on #v-perf{padding-bottom:52px}
 table.am tbody tr:hover td{background:#172136}
 table.am tbody tr.sel td{background:#14274a}
 table.am td.l{text-align:left}
@@ -405,6 +411,7 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
     <div id="amTable" class="amwrap"></div>
     <div class="xs muted" style="margin:8px 2px">Bấm <b>tên</b> để xem cấp bên trong · bấm <b>📊 Chi tiết</b> để xem 4 mốc thời gian · bấm <b>ngân sách</b> để sửa · kéo ngang để xem thêm cột.</div>
   </section>
+  <div id="amFoot"></div>
 
   <!-- ===================== TAB: NHẬT KÝ ===================== -->
   <section id="v-log" class="hidden">
@@ -2919,12 +2926,12 @@ function amRows(lvl) {
 }
 
 function renderPerf() {
-  if (!D) { $('perfKpi').innerHTML = ''; $('amTable').innerHTML = '<div class="empty">Chưa có dữ liệu.</div>'; $('amTabs').innerHTML = ''; return; }
+  if (!D) { $('perfKpi').innerHTML = ''; $('amTable').innerHTML = '<div class="empty">Chưa có dữ liệu.</div>'; $('amTabs').innerHTML = ''; $('amFoot').innerHTML = ''; return; }
   $('dateLbl').textContent = curLabel(); syncQdBar();
   $('dateCmp').textContent = amCompare ? 'So với ' + prevLabel() : '';
   if (!rangeReady()) {
     ensureRange();
-    $('amTabs').innerHTML = ''; $('perfKpi').innerHTML = ''; $('ovMini').innerHTML = '';
+    $('amTabs').innerHTML = ''; $('perfKpi').innerHTML = ''; $('ovMini').innerHTML = ''; $('amFoot').innerHTML = '';
     $('amTable').innerHTML = '<div class="empty"><span class="spin" style="display:inline-block">⟳</span> Đang tải số liệu ' + esc(curLabel()) + '…</div>';
     return;
   }
@@ -3008,10 +3015,14 @@ function renderAmTable() {
   });
   const t = emptyM(), tp = emptyM(); rows.forEach(r => { addInto(t, r.m); if (r.pm) addInto(tp, r.pm); }); fin(t); fin(tp);
   const T_ = (cur, key, kind, ok) => amCompare && ok ? dlt(cur, tp[key], kind) : '';
-  h += `</tbody><tfoot><tr><td class="nm"><div>Kết quả từ ${rows.length} ${AM_LVL_NAME[amLvl]}</div><div class="xs faint" style="font-weight:500">${esc(curLabel())}${amCompare ? ' · so với ' + esc(prevLabel()) : ''}</div></td>
-    <td></td><td></td><td>${t.r ? nf.format(t.r) : '—'}${T_(t.r, 'r', 'up', true)}</td><td>${t.r ? vnd(t.cpr) : '—'}${T_(t.cpr, 'cpr', 'down', t.r && tp.r)}</td><td>${vnd(t.s)}${T_(t.s, 's', 'n', true)}</td><td>${nf.format(t.imp)}${T_(t.imp, 'imp', 'n', true)}</td><td>${nf.format(t.lc)}${T_(t.lc, 'lc', 'up', true)}</td><td>${t.imp ? pct(t.ctrL) : '—'}${T_(t.ctrL, 'ctrL', 'up', t.imp)}</td><td>${t.lc ? vnd(t.cpc) : '—'}${T_(t.cpc, 'cpc', 'down', t.lc)}</td><td>${t.imp ? vnd(t.cpm) : '—'}${T_(t.cpm, 'cpm', 'down', t.imp)}</td><td>${t.lc ? pct(t.cr) : '—'}${T_(t.cr, 'cr', 'up', t.lc && tp.lc)}</td></tr></tfoot></table>`;
+  h += `</tbody></table>`;
   const wrap = $('amTable'); const sx = wrap.scrollLeft, sy = wrap.scrollTop;
   wrap.innerHTML = h; wrap.scrollLeft = sx; wrap.scrollTop = sy;
+  // Fixed footer bar
+  const sep = '<span class="af-sep">·</span>';
+  const fK = scopeTarget().v || 130000;
+  const footH = `<div class="af-row"><span class="af-label">${rows.length} ${AM_LVL_NAME[amLvl]}</span>${sep}<span class="af-val">${t.r ? nf.format(t.r) : '—'} KQ</span>${sep}<span class="af-val">CPR <b class="${!t.r ? '' : t.cpr <= fK ? 'good' : t.cpr <= fK * S.cutX ? 'warn' : 'bad'}">${t.r ? vnd(t.cpr) : '—'}</b></span>${sep}<span class="af-val">${vnd(t.s)}</span>${sep}<span class="af-val">${nf.format(t.imp)} imp</span>${sep}<span class="af-val">CTR ${t.imp ? pct(t.ctrL) : '—'}</span>${sep}<span class="af-val">CPC ${t.lc ? vnd(t.cpc) : '—'}</span>${sep}<span class="af-val">CPM ${t.imp ? vnd(t.cpm) : '—'}</span>${sep}<span class="af-val">CR ${t.lc ? pct(t.cr) : '—'}</span></div>`;
+  $('amFoot').innerHTML = footH;
   window._amRows = rows;
   renderPaceSum();
 }
@@ -3185,8 +3196,11 @@ function renderCreativeTable() {
     h += '</tr>';
   });
   const t = emptyM(); rows.forEach(g => addInto(t, g.m)); fin(t);
-  h += `</tbody><tfoot><tr><td class="nm"><div>${rows.length} creative</div><div class="xs faint" style="font-weight:500">${esc(curLabel())} · gom theo ${crGroup === 'content' ? 'hình/video' : 'tên quảng cáo'}</div></td><td></td><td></td><td>${t.r || '—'}</td><td>${t.r ? vnd(t.cpr) : '—'}</td><td>${vnd(t.s)}</td><td>${t.imp ? pct(t.ctrL) : '—'}</td><td>${t.imp ? vnd(t.cpm) : '—'}</td><td>${t.v3 ? pct(t.hook, 1) : '—'}</td><td>${t.v3 ? pct(t.hold, 1) : '—'}</td><td>${t.v3 ? pct(t.comp, 1) : '—'}</td></tr></tfoot></table>`;
+  h += `</tbody></table>`;
   const wrap = $('amTable'); const sx = wrap.scrollLeft; wrap.innerHTML = h; wrap.scrollLeft = sx;
+  // Fixed footer for creative tab
+  const sep = '<span class="af-sep">·</span>';
+  $('amFoot').innerHTML = `<div class="af-row"><span class="af-label">${rows.length} creative</span>${sep}<span class="af-val">${t.r || '—'} KQ</span>${sep}<span class="af-val">CPR ${t.r ? vnd(t.cpr) : '—'}</span>${sep}<span class="af-val">${vnd(t.s)}</span>${sep}<span class="af-val">CTR ${t.imp ? pct(t.ctrL) : '—'}</span>${sep}<span class="af-val">CPM ${t.imp ? vnd(t.cpm) : '—'}</span></div>`;
   window._crList = list;
   $('crNote').innerHTML = `Gom theo: <button class="lnk xs" data-crgroup="content" style="padding:0;${crGroup === 'content' ? 'text-decoration:underline' : 'opacity:.6'}">hình/video thật</button> · <button class="lnk xs" data-crgroup="name" style="padding:0;${crGroup === 'name' ? 'text-decoration:underline' : 'opacity:.6'}">tên quảng cáo</button>
     · Hạng tính theo CPR, chỉ xét creative có ≥ 2 kết quả và đã tiêu ≥ 1× CPR mục tiêu. Chỉ số video tô <b class="good">xanh</b>/<b class="bad">đỏ</b> khi cao/thấp hơn 20% so với trung vị các video của bạn.`;
@@ -3733,6 +3747,7 @@ function ensurePBI() {
 function switchTab(tab) {
   currentTab = tab;
   document.body.classList.toggle('wide', tab === 'perf');
+  document.body.classList.toggle('amfoot-on', tab === 'perf');
   document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   ['todo', 'perf', 'log', 'set'].forEach(t => $('v-' + t).classList.toggle('hidden', t !== tab));
   $('pbiWrap').classList.toggle('hidden', tab !== 'pbi');
