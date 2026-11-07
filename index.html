@@ -208,7 +208,7 @@ details summary{cursor:pointer;list-style:none} details summary::-webkit-details
 .amtool select.field{flex:1 1 auto;min-width:0}
 .amtool label{flex:0 0 auto;white-space:nowrap}
 @media(min-width:480px){.amtool input.field{flex:1 1 0}}
-.amwrap{overflow:auto;max-height:calc(100vh - 150px);border:1px solid var(--border);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch}
+.amwrap{overflow:auto;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px);border:1px solid var(--border);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch}
 table.am{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:100%}
 table.am th,table.am td{padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:right;vertical-align:middle;background:var(--card)}
 table.am thead th{position:sticky;top:0;z-index:3;background:#1a2438;color:#b6c2d6;font-weight:700;font-size:11.5px;cursor:pointer;user-select:none;border-bottom:1px solid #33425f}
@@ -216,8 +216,8 @@ table.am thead th .ar{color:#7fb2ff;font-size:10px}
 table.am thead th.sorted{color:#fff}
 table.am th.nm,table.am td.nm{position:sticky;left:0;z-index:2;text-align:left;min-width:250px;max-width:300px;white-space:normal;box-shadow:1px 0 0 var(--border)}
 table.am thead th.nm{z-index:4}
-table.am tfoot td{position:sticky;bottom:0;z-index:2;background:#1a2438;font-weight:700;border-top:1px solid #33425f;border-bottom:0}
-table.am tfoot td.nm{z-index:4}
+table.am tfoot td{position:sticky;bottom:0;z-index:3;background:#1a2438;font-weight:700;border-top:2px solid #33425f;border-bottom:0;box-shadow:0 -2px 8px rgba(0,0,0,.4)}
+table.am tfoot td.nm{z-index:5}
 table.am tbody tr:hover td{background:#172136}
 table.am tbody tr.sel td{background:#14274a}
 table.am td.l{text-align:left}
@@ -390,7 +390,7 @@ body.wide .wrap,body.wide .nav .in,body.wide .bulk .in{max-width:1400px}
     <div class="amtool">
       <input id="perfSearch" class="field grow" placeholder="🔍 Tìm kiếm theo tên…" autocomplete="off">
       <select id="amFilter" class="field" style="width:auto">
-        <option value="onspent">Đang bật / có chi tiêu</option><option value="on">Chỉ đang bật</option><option value="all">Tất cả</option><option value="pace_slow">⏱ Tiêu chậm (hôm nay)</option><option value="pace_fast">⏱ Tiêu nhanh / sắp hết NS</option>
+        <option value="onspent">Đang bật / có chi tiêu</option><option value="spent_today">💰 Tiêu tiền hôm nay</option><option value="on">Chỉ đang bật</option><option value="all">Tất cả</option><option value="pace_slow">⏱ Tiêu chậm (hôm nay)</option><option value="pace_fast">⏱ Tiêu nhanh / sắp hết NS</option>
       </select>
       <label class="row xs b" style="gap:6px;white-space:nowrap;padding:0 4px"><input type="checkbox" id="amCmp" class="chk" style="width:16px;height:16px" checked> So sánh kỳ trước</label>
     </div>
@@ -2001,6 +2001,25 @@ function runEngine() {
     b.cpcMed = b.cpcs.length >= 2 ? b.cpcs[Math.floor(b.cpcs.length / 2)] : 0;
   });
 
+  // Baseline ngày T theo tài khoản (dùng so sánh trong rec card)
+  const accBaseT = {};
+  Object.values(D.adsets).forEach(a => {
+    if (!inScope(a.project)) return;
+    const acc = a.accId; if (!acc) return;
+    const tv = agg(D.ins.adset[a.id], T);
+    if (!accBaseT[acc]) accBaseT[acc] = { cpms: [], ctrs: [], cpcs: [], crs: [] };
+    if (tv.imp >= 500) { accBaseT[acc].cpms.push(tv.cpm); accBaseT[acc].ctrs.push(tv.ctrL); }
+    if (tv.lc >= 10) { accBaseT[acc].cpcs.push(tv.cpc); if (tv.r) accBaseT[acc].crs.push(tv.cr); }
+  });
+  Object.keys(accBaseT).forEach(acc => {
+    const b = accBaseT[acc];
+    [b.cpms, b.ctrs, b.cpcs, b.crs].forEach(arr => arr.sort((x, y) => x - y));
+    b.cpmMed = b.cpms.length >= 2 ? b.cpms[Math.floor(b.cpms.length / 2)] : 0;
+    b.ctrMed = b.ctrs.length >= 2 ? b.ctrs[Math.floor(b.ctrs.length / 2)] : 0;
+    b.cpcMed = b.cpcs.length >= 2 ? b.cpcs[Math.floor(b.cpcs.length / 2)] : 0;
+    b.crMed = b.crs.length >= 2 ? b.crs[Math.floor(b.crs.length / 2)] : 0;
+  });
+
   const killAdsets = new Set();
   const cboGroups = {};
 
@@ -2220,7 +2239,11 @@ function runEngine() {
         rec.action = budgetAction(bt, -S.downPct, as.name);
         rec.alts = [{ kind: 'pause', id: as.id, type: 'adset', name: as.name }];
       }
-      RECS.push(Object.assign(rec, { ent, t, r, l, f7, K, budget: bt, key: rec.type + '|adset|' + as.id + '|' + T[0] }));
+      // Kill có budget ABO → thêm alt giảm NS để user có lựa chọn thay vì chỉ tắt
+      if (rec.type === 'kill' && bt && !isCBO) {
+        rec.alts = [budgetAction(bt, -S.downPct, as.name)];
+      }
+      RECS.push(Object.assign(rec, { ent, t, r, l, f7, K, budget: bt, abT: accBaseT[as.accId] || {}, key: rec.type + '|adset|' + as.id + '|' + T[0] }));
     } else {
       OKS.push({ ent, t, r, K, note: K && t.s < K * 0.5 ? 'Ít dữ liệu' : (t.r ? 'Trong ngưỡng' : 'Đang theo dõi'), dot: statusDot(t, K) });
     }
@@ -2266,9 +2289,9 @@ function runEngine() {
           'Meta đang ưu tiên nhóm kém và không chuyển đổi. Cân nhắc tắt nhóm đó hoặc kiểm tra creative để Meta phân bổ lại.'
         ]
       };
-      RECS.push(Object.assign(concRec, { ent, t, r, l: emptyM(), f7: {}, K, budget: null, key: 'watch|cbo-conc|' + cid + '|' + T[0] }));
+      RECS.push(Object.assign(concRec, { ent, t, r, l: emptyM(), f7: {}, K, budget: null, abT: accBaseT[ent.accId] || {}, key: 'watch|cbo-conc|' + cid + '|' + T[0] }));
     }
-    if (rec) RECS.push(Object.assign(rec, { ent, t, r, l: emptyM(), f7: {}, K, budget: g.bt, key: rec.type + '|campaign|' + cid + '|' + T[0] }));
+    if (rec) RECS.push(Object.assign(rec, { ent, t, r, l: emptyM(), f7: {}, K, budget: g.bt, abT: accBaseT[ent.accId] || {}, key: rec.type + '|campaign|' + cid + '|' + T[0] }));
   });
 
   // ---- cấp quảng cáo: loại mẫu kém trong nhóm đang chạy ----
@@ -2308,7 +2331,7 @@ function runEngine() {
       if (rec) {
         if (rec.type === 'kill') rec.action = { kind: 'pause', id: x.ad.id, type: 'ad', name: x.ad.name };
         rec.alts = [];
-        RECS.push(Object.assign(rec, { ent, t: x.t, r: x.r, l: emptyM(), f7: x.f7, K, budget: null, key: rec.type + '|ad|' + x.ad.id + '|' + T[0] }));
+        RECS.push(Object.assign(rec, { ent, t: x.t, r: x.r, l: emptyM(), f7: x.f7, K, budget: null, abT: accBaseT[ent.accId] || {}, key: rec.type + '|ad|' + x.ad.id + '|' + T[0] }));
       }
     });
   });
@@ -2383,7 +2406,7 @@ function runEngine() {
     if (rec) {
       rec.alts = [];
       RECS.push(Object.assign(rec, {
-        ent, t, r: r_hist, l: emptyM(), f7: D.f7.ad[ad.id] || { freq: 0 }, K, budget: null,
+        ent, t, r: r_hist, l: emptyM(), f7: D.f7.ad[ad.id] || { freq: 0 }, K, budget: null, abT: accBaseT[ent.accId] || {},
         key: rec.type + '|ad|' + ad.id + '|' + T[0] + '|new'
       }));
     }
@@ -2662,15 +2685,33 @@ function renderTodo() {
   renderBudgetHistory();
 }
 
-function metricBox(label, m, K) {
+function cmpTag(val, med) {
+  if (!val || !med) return '';
+  const d = Math.round((val / med - 1) * 100);
+  if (Math.abs(d) < 5) return ' <span class="xs muted">≈TB</span>';
+  return d > 0 ? ` <span class="xs bad">↑${d}%</span>` : ` <span class="xs good">↓${Math.abs(d)}%</span>`;
+}
+function cmpTagInv(val, med) {
+  // Ngược lại: cao hơn = tốt (CTR, CR)
+  if (!val || !med) return '';
+  const d = Math.round((val / med - 1) * 100);
+  if (Math.abs(d) < 5) return ' <span class="xs muted">≈TB</span>';
+  return d > 0 ? ` <span class="xs good">↑${d}%</span>` : ` <span class="xs bad">↓${Math.abs(d)}%</span>`;
+}
+function metricBox(label, m, K, abT) {
   const c = !K || !m.r ? '' : m.cpr <= K ? 'good' : m.cpr <= K * S.cutX ? 'warn' : 'bad';
-  return `<div class="m"><div class="l">${label}</div><div class="v num">${k(m.s)} · ${m.r} KQ</div><div class="s">CPR <b class="${c}">${m.r ? k(m.cpr) : '—'}</b></div></div>`;
+  const cpcLine = m.lc ? `CPC ${k(m.cpc)}${abT ? cmpTag(m.cpc, abT.cpcMed) : ''}` : '';
+  const crLine = m.r ? ` · CR ${pct(m.cr)}${abT ? cmpTagInv(m.cr, abT.crMed) : ''}` : '';
+  const extra = cpcLine || crLine ? `<div class="xs muted">${cpcLine}${crLine}</div>` : '';
+  return `<div class="m"><div class="l">${label}</div><div class="v num">${k(m.s)} · ${m.r} KQ</div><div class="s">CPR <b class="${c}">${m.r ? k(m.cpr) : '—'}</b></div>${extra}</div>`;
 }
 function recCard(r) {
   const done = doneMap[r.key];
   const e = r.ent;
   const lvlTxt = e.level === 'ad' ? 'Quảng cáo' : e.level === 'campaign' ? 'Chiến dịch' : 'Nhóm QC';
-  const ctrBox = `<div class="m"><div class="l">CTR link · CPM</div><div class="v num">${pct(r.t.ctrL)}</div><div class="s">CPM ${k(r.t.cpm)}${r.f7 && r.f7.freq ? ' · TS ' + r.f7.freq.toFixed(1).replace('.', ',') : ''}</div></div>`;
+  const ab = r.abT || {};
+  const freqTxt = r.f7 && r.f7.freq ? r.f7.freq.toFixed(1).replace('.', ',') : '—';
+  const ctrBox = `<div class="m"><div class="l">CTR link · CPM</div><div class="v num">${pct(r.t.ctrL)}${cmpTagInv(r.t.ctrL, ab.ctrMed)}</div><div class="s">CPM ${k(r.t.cpm)}${cmpTag(r.t.cpm, ab.cpmMed)}</div><div class="xs muted">TS 7N: ${freqTxt}</div></div>`;
   const budgetLine = r.budget ? `<div class="xs muted" style="margin-top:8px">Ngân sách ${r.budget.type === 'campaign' ? 'CBO' : 'ngày'}: <b style="color:var(--foreground)">${vnd(r.budget.cur)}</b> · CPR mục tiêu ${k(r.K)}</div>` : `<div class="xs muted" style="margin-top:8px">CPR mục tiêu ${k(r.K)}</div>`;
   const acts = [];
   if (!done && r.action) acts.push(`<button class="btn ${r.type === 'watch' ? 'p' : r.type}" data-run="${esc(r.key)}" data-i="-1">${esc(actionLabel(r.action))}</button>`);
@@ -2714,7 +2755,7 @@ function recCard(r) {
           return `<div style="flex:1;min-width:60px;padding:5px 6px;background:var(--bg);border-radius:6px;text-align:center"><div class="xs muted">${lbl}</div><div class="sm num b">${x.m.r} <span class="xs">KQ</span></div><div class="xs num ${cls}">${x.m.s > 0 ? k(x.m.s) : '—'}${x.m.r ? ' · ' + k(x.m.cpr) : ''}</div></div>`;
         }).join('') + '</div>';
       })()}
-      <div class="mgrid">${metricBox(focusDay === 'today' ? 'Hôm nay' : 'Hôm qua', r.t, r.K)}${metricBox('3 ngày trước', r.r, r.K)}${ctrBox}</div>${budgetLine}
+      <div class="mgrid">${metricBox(focusDay === 'today' ? 'Hôm nay' : 'Hôm qua', r.t, r.K, ab)}${metricBox('3 ngày trước', r.r, r.K, ab)}${ctrBox}</div>${budgetLine}
       ${done ? `<div class="done">✓ ${esc(done.label)} lúc ${hhmm(done.ts)}<span class="grow"></span><button class="lnk" data-undo="${done.id}">Hoàn tác</button></div>` : ''}
       <div class="acts">${acts.join('')}</div>
     </div></div>`;
@@ -2847,6 +2888,19 @@ function amRows(lvl) {
   let out = rows.filter(r => {
     if (amFilter === 'on' && !r.on) return false;
     if (amFilter === 'onspent' && !r.on && r.m.s <= 0) return false;
+    if (amFilter === 'spent_today') {
+      // Luôn check spend ngày hôm nay (days[0]) bất kể time window đang chọn
+      const todayKey = D.days[0];
+      let todayS = 0;
+      if (r.lvl === 'campaign') {
+        Object.values(D.ins.adset).forEach(e => { if (e.campaignId === r.id && e.d[todayKey]) todayS += e.d[todayKey].s || 0; });
+      } else if (r.lvl === 'adset') {
+        const e = D.ins.adset[r.id]; if (e && e.d[todayKey]) todayS = e.d[todayKey].s || 0;
+      } else {
+        const e = D.ins.ad[r.id]; if (e && e.d[todayKey]) todayS = e.d[todayKey].s || 0;
+      }
+      if (todayS <= 0) return false;
+    }
     if (amFilter === 'pace_slow' && !(r.pace && (r.pace.c === 'slow' || r.pace.c === 'stuck'))) return false;
     if (amFilter === 'pace_fast' && !(r.pace && (r.pace.c === 'fast' || r.pace.c === 'cap'))) return false;
     if (q && !((r.name || '') + ' ' + (r.acc || '') + ' ' + (r.sub || '')).toLowerCase().includes(q)) return false;
